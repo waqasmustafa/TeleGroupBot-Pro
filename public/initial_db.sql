@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 
 CREATE TABLE IF NOT EXISTS `packages` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `package_name` tinytext COLLATE utf8mb4_unicode_ci NOT NULL,
   `package_type` enum('subscription','team') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'subscription',
   `module_ids` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS `password_resets` (
 
 CREATE TABLE IF NOT EXISTS `payment_api_logs` (
   `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `buyer_user_id` int(11) DEFAULT NULL,
+  `buyer_user_id` bigint(20) unsigned DEFAULT NULL,
   `call_time` datetime DEFAULT NULL,
   `payment_method` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `api_response` text COLLATE utf8mb4_unicode_ci,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS `payment_api_logs` (
 
 CREATE TABLE IF NOT EXISTS `settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `app_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `logo` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
   `logo_alt` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS `settings_email_autoresponders` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `profile_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `api_name` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `settings_data` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1',
   `updated_at` datetime DEFAULT NULL,
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS `settings_payments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `ecommerce_store_id` int(11) DEFAULT NULL COMMENT 'null means payment settings not ecommerce',
   `whatsapp_bot_id` int(11) DEFAULT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `paypal` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `stripe` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `razorpay` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS `settings_sms_emails` (
   `profile_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `api_name` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `api_type` enum('sms','email') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'email',
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `settings_data` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1',
   `updated_at` datetime DEFAULT NULL,
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS `settings_sms_emails` (
 
 CREATE TABLE IF NOT EXISTS `sms_email_send_logs` (
   `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `email_api_id` int(11) DEFAULT NULL,
   `settings_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS `sms_email_send_logs` (
 
 CREATE TABLE IF NOT EXISTS `telegram_bots` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `bot_token` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `bot_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_bot` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -286,7 +286,7 @@ CREATE TABLE IF NOT EXISTS `telegram_groups` (
 
 CREATE TABLE IF NOT EXISTS `telegram_group_message_filterings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `telegram_group_id` bigint(20) NOT NULL,
   `delete_command` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0',
   `delete_image` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0',
@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS `telegram_group_message_filterings` (
 
 CREATE TABLE IF NOT EXISTS `telegram_group_message_sends` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `campaign_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `telegram_group_id` bigint(20) NOT NULL,
   `message_content` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -357,8 +357,8 @@ CREATE TABLE IF NOT EXISTS `telegram_group_subscribers` (
 
 CREATE TABLE IF NOT EXISTS `transaction_logs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `buyer_user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `buyer_user_id` bigint(20) unsigned NOT NULL,
   `verify_status` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
   `first_name` varchar(250) COLLATE utf8mb4_unicode_ci NOT NULL,
   `last_name` varchar(250) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -384,8 +384,8 @@ CREATE TABLE IF NOT EXISTS `transaction_logs` (
 
 CREATE TABLE IF NOT EXISTS `transaction_manual_logs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `buyer_user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `buyer_user_id` bigint(20) unsigned NOT NULL,
   `package_id` int(11) NOT NULL,
   `transaction_id` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `paid_amount` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -416,7 +416,7 @@ CREATE TABLE IF NOT EXISTS `update_list` (
 CREATE TABLE IF NOT EXISTS `usage_logs` (
   `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `module_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
   `usage_month` int(11) NOT NULL,
   `usage_year` year(4) NOT NULL,
   `usage_count` int(11) NOT NULL,
@@ -427,7 +427,7 @@ CREATE TABLE IF NOT EXISTS `usage_logs` (
 
 
 CREATE TABLE IF NOT EXISTS `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `mobile` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -442,7 +442,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `last_login_at` datetime DEFAULT NULL,
   `last_login_ip` varchar(25) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `activation_code` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `parent_user_id` int(11) NOT NULL DEFAULT '1',
+  `parent_user_id` bigint(20) unsigned NOT NULL DEFAULT '1',
   `user_type` enum('Member','Admin','Agent','Manager','Team') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Member',
   `agent_has_whitelabel` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0',
   `agent_has_ppu` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0',
