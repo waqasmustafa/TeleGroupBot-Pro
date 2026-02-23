@@ -11,6 +11,8 @@ class MtprotoEventHandler extends EventHandler
 {
     public static $user_id;
     public static $account_id;
+    public static $api_id;
+    public static $api_hash;
 
     public function onStart(): void
     {

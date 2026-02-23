@@ -169,19 +169,26 @@ class MTProtoService implements MTProtoServiceInterface
 
     public function startListener($account)
     {
-        $this->setAccount($account);
+        $this->includeMadeline();
         
         // Ensure EventHandler is loaded
         if (!class_exists('\App\Services\MtprotoEventHandler')) {
             require_once __DIR__ . '/MtprotoEventHandler.php';
         }
 
-        \App\Services\MtprotoEventHandler::$user_id = $account->user_id;
+        // Pass account context to the event handler via static properties
+        \App\Services\MtprotoEventHandler::$user_id    = $account->user_id;
         \App\Services\MtprotoEventHandler::$account_id = $account->id;
+        \App\Services\MtprotoEventHandler::$api_id     = $account->api_id;
+        \App\Services\MtprotoEventHandler::$api_hash   = $account->api_hash;
 
-        \Illuminate\Support\Facades\Log::info("Starting MTProto Live Listener for Account {$account->id}");
+        $session_file = $this->session_dir . 'session_' . $account->id . '.madeline';
+        $settings = $this->getSettings($account->api_id, $account->api_hash);
+
+        \Illuminate\Support\Facades\Log::info("Starting MTProto Live Listener for Account {$account->id}", ['session' => $session_file]);
         
-        // MadelineProto v8 loop starts the perpetual listening
-        $this->MadelineProto->loop(\App\Services\MtprotoEventHandler::class);
+        // MadelineProto v8: use the static EventHandler::startAndLoop pattern
+        // This is the ONLY correct way to start the event handler in v8+
+        \App\Services\MtprotoEventHandler::startAndLoop($session_file, $settings);
     }
 }
