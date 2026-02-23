@@ -16,7 +16,7 @@ class CreateMtprotoSystemTables extends Migration
         // 1. MTProto Accounts
         Schema::create('mtproto_accounts', function (Blueprint $table) {
             $table->id();
-            $table->integer('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->string('phone')->unique();
             $table->integer('api_id');
             $table->string('api_hash');
@@ -30,7 +30,7 @@ class CreateMtprotoSystemTables extends Migration
         // 2. Contact Lists
         Schema::create('mtproto_contact_lists', function (Blueprint $table) {
             $table->id();
-            $table->integer('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->string('name');
             $table->timestamps();
 
@@ -40,7 +40,7 @@ class CreateMtprotoSystemTables extends Migration
         // 3. Contacts
         Schema::create('mtproto_contacts', function (Blueprint $table) {
             $table->id();
-            $table->integer('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('list_id');
             $table->string('username')->nullable();
             $table->string('phone')->nullable();
@@ -55,7 +55,7 @@ class CreateMtprotoSystemTables extends Migration
         // 4. Templates
         Schema::create('mtproto_templates', function (Blueprint $table) {
             $table->id();
-            $table->integer('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->string('title');
             $table->text('message');
             $table->timestamps();
@@ -66,7 +66,7 @@ class CreateMtprotoSystemTables extends Migration
         // 5. Campaigns
         Schema::create('mtproto_campaigns', function (Blueprint $table) {
             $table->id();
-            $table->integer('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('list_id');
             $table->unsignedBigInteger('template_id');
             $table->string('campaign_name');
@@ -86,7 +86,7 @@ class CreateMtprotoSystemTables extends Migration
         // 6. Messages (Inbox/Outbox)
         Schema::create('mtproto_messages', function (Blueprint $table) {
             $table->id();
-            $table->integer('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('account_id');
             $table->string('contact_identifier'); // Phone or Username
             $table->enum('direction', ['in', 'out']);

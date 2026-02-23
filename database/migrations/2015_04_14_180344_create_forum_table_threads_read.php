@@ -14,7 +14,7 @@ class CreateForumTableThreadsRead extends Migration
     {
         Schema::create('forum_threads_read', function (Blueprint $table) {
             $table->integer('thread_id')->unsigned();
-            $table->integer('user_id')->unsigned();
+            $table->unsignedBigInteger('user_id');
             $table->timestamps();
         });
     }
