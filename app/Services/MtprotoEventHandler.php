@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use danog\MadelineProto\EventHandler;
@@ -18,7 +20,8 @@ class MtprotoEventHandler extends EventHandler
     {
         Log::info("EventHandler started for Account " . self::$account_id);
         
-        // Polling loop for outgoing messages (Windows compatibility hack)
+        // Polling loop for outgoing messages
+        // PeriodicLoop v2+ requires: (callable, string $name, ?float $interval)
         $loop = new PeriodicLoop(function () {
             try {
                 $pending = MtprotoMessage::where('account_id', self::$account_id)
@@ -45,7 +48,7 @@ class MtprotoEventHandler extends EventHandler
             } catch (\Exception $e) {
                 Log::error("Listener Polling Error: " . $e->getMessage());
             }
-        }, 1.0); // Check every 1 second
+        }, 'outgoing-message-poller', 1.0); // (callback, name, interval_seconds)
         
         $loop->start();
     }
@@ -71,7 +74,7 @@ class MtprotoEventHandler extends EventHandler
             $info = $this->getInfo($from_id);
             $identifier = $info['User']['username'] ?? $info['User']['phone'] ?? (string)$from_id;
 
-            // Check if message already exists to avoid duplicates (though loop() handles state)
+            // Check if message already exists to avoid duplicates
             $exists = MtprotoMessage::where('account_id', self::$account_id)
                 ->where('contact_identifier', $identifier)
                 ->where('message', $message['message'] ?? '')
@@ -80,13 +83,13 @@ class MtprotoEventHandler extends EventHandler
 
             if (!$exists) {
                 MtprotoMessage::create([
-                    'user_id' => self::$user_id,
-                    'account_id' => self::$account_id,
+                    'user_id'            => self::$user_id,
+                    'account_id'         => self::$account_id,
                     'contact_identifier' => $identifier,
-                    'direction' => 'in',
-                    'message' => $message['message'] ?? '',
-                    'message_time' => date('Y-m-d H:i:s', $message['date']),
-                    'status' => 'success'
+                    'direction'          => 'in',
+                    'message'            => $message['message'] ?? '',
+                    'message_time'       => date('Y-m-d H:i:s', $message['date']),
+                    'status'             => 'success'
                 ]);
                 Log::info("Captured incoming message for Account " . self::$account_id, ['from' => $identifier]);
             }
