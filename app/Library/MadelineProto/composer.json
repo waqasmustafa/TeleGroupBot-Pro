@@ -1,0 +1,12 @@
+{
+    "name": "isolated/madelineproto",
+    "description": "Isolated MadelineProto v8 for Laravel 8 compatibility",
+    "require": {
+        "danog/madelineproto": "^8"
+    },
+    "config": {
+        "platform": {
+            "php": "8.2.12"
+        }
+    }
+}
