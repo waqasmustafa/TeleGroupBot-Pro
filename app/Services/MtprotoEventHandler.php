@@ -20,7 +20,7 @@ class MtprotoEventHandler extends EventHandler
 
     public function onStart(): void
     {
-        Log::info("EventHandler started for Account " . self::$account_id);
+        Log::info("EventHandler started for Account " . self::$account_id . " (User ID: " . self::$user_id . ")");
     }
 
     /**
@@ -112,12 +112,17 @@ class MtprotoEventHandler extends EventHandler
                 // 2. Notify all Admins
                 $this->createSystemNotification($identifier, $messageText);
 
+                Log::info("Dispatching real-time message event", [
+                    'user_id' => self::$user_id,
+                    'channel' => 'mtproto-realtime-channel-' . self::$user_id
+                ]);
+
                 // BROADCAST REAL-TIME MESSAGE:
-                MtprotoRealtimeEvent::dispatch(self::$user_id, 'message', [
+                broadcast(new MtprotoRealtimeEvent(self::$user_id, 'message', [
                     'message'    => $newMessage,
                     'identifier' => $identifier,
                     'account_id' => self::$account_id
-                ]);
+                ]));
             }
         } catch (\Throwable $e) {
             Log::error("MTProto EventHandler onUpdateNewMessage Error: " . $e->getMessage());
@@ -163,7 +168,7 @@ class MtprotoEventHandler extends EventHandler
                 DB::table('notifications')->insert($item);
 
                 // BROADCAST NOTIFICATION TO EACH TARGET:
-                MtprotoRealtimeEvent::dispatch($targetId, 'notification', $item);
+                broadcast(new MtprotoRealtimeEvent($targetId, 'notification', $item));
             }
 
         } catch (\Throwable $e) {

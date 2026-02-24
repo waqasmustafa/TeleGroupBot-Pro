@@ -31,6 +31,12 @@ class MtprotoRealtimeEvent implements ShouldBroadcastNow
         $this->user_id = $user_id;
         $this->type = $type;
         $this->payload = $payload;
+        
+        \Log::debug("MtprotoRealtimeEvent instantiated", [
+            'user_id' => $user_id,
+            'type'    => $type,
+            'channel' => 'mtproto-realtime-channel-' . $user_id
+        ]);
     }
 
     /**
