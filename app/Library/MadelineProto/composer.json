@@ -4,7 +4,7 @@
     "require": {
         "danog/madelineproto": "^8",
         "monolog/monolog": "^2.0",
-        "psr/log": "1.1.4"
+        "psr/log": "1.1.4 as 3.0.5"
     },
     "config": {
         "platform": {
