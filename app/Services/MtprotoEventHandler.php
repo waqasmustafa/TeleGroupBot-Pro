@@ -21,47 +21,58 @@ class MtprotoEventHandler extends EventHandler
     }
 
     /**
-     * DEBUG: Catch ALL update types to log what is actually being received.
-     * Remove this method once the correct update type is identified.
+     * DEBUG: Catch all update types (only fires for types with no specific handler).
      */
     public function onAny(array $update): void
     {
         $type = $update['_'] ?? 'unknown';
-        Log::info("MTProto Raw Update received for Account " . self::$account_id, [
-            'type'    => $type,
-            'out'     => $update['message']['out'] ?? null,
-            'msg'     => isset($update['message']['message'])
-                         ? substr($update['message']['message'], 0, 50)
-                         : null,
-        ]);
+        // Only log non-noise update types
+        if (!in_array($type, ['updateUserStatus', 'updateUserTyping'])) {
+            Log::info("MTProto Unhandled Update for Account " . self::$account_id, ['type' => $type]);
+        }
     }
 
     public function onUpdateNewMessage(array $update): void
     {
-        if (($update['message']['_'] ?? '') === 'messageService') {
-            return;
-        }
-
-        $message = $update['message'];
-
-        // Only handle incoming messages (out = false)
-        if ($message['out'] ?? false) {
-            return;
-        }
-
-        $from_id = $message['from_id']['user_id'] ?? null;
-        if (!$from_id) return;
-
         try {
-            // Fetch peer info to get username/phone
-            $info = $this->getInfo($from_id);
-            $identifier = $info['User']['username'] ?? $info['User']['phone'] ?? (string)$from_id;
+            // Log that we entered this method (debug)
+            Log::info("MTProto onUpdateNewMessage called for Account " . self::$account_id, [
+                'msg_type' => $update['message']['_'] ?? 'unknown',
+                'out'      => $update['message']['out'] ?? null,
+            ]);
 
-            // Check if message already exists to avoid duplicates
+            if (($update['message']['_'] ?? '') === 'messageService') {
+                return;
+            }
+
+            $message = $update['message'];
+
+            // Only handle incoming messages (out = false means received)
+            if ($message['out'] ?? false) {
+                return;
+            }
+
+            // Get identifier from from_id WITHOUT calling getInfo() (avoids async issues)
+            $from_id = $message['from_id']['user_id']
+                    ?? $message['peer_id']['user_id']
+                    ?? null;
+
+            if (!$from_id) {
+                Log::warning("MTProto: Could not determine from_id", ['update' => json_encode($message)]);
+                return;
+            }
+
+            // Use user_id as identifier (can be enriched later)
+            $identifier = (string)$from_id;
+
+            $messageText = $message['message'] ?? '';
+            $messageTime = date('Y-m-d H:i:s', $message['date'] ?? time());
+
+            // Avoid duplicates
             $exists = MtprotoMessage::where('account_id', self::$account_id)
                 ->where('contact_identifier', $identifier)
-                ->where('message', $message['message'] ?? '')
-                ->where('message_time', date('Y-m-d H:i:s', $message['date']))
+                ->where('message', $messageText)
+                ->where('message_time', $messageTime)
                 ->exists();
 
             if (!$exists) {
@@ -70,20 +81,26 @@ class MtprotoEventHandler extends EventHandler
                     'account_id'         => self::$account_id,
                     'contact_identifier' => $identifier,
                     'direction'          => 'in',
-                    'message'            => $message['message'] ?? '',
-                    'message_time'       => date('Y-m-d H:i:s', $message['date']),
-                    'status'             => 'success'
+                    'message'            => $messageText,
+                    'message_time'       => $messageTime,
+                    'status'             => 'success',
                 ]);
-                Log::info("Captured incoming message for Account " . self::$account_id, ['from' => $identifier]);
+                Log::info("Captured incoming message for Account " . self::$account_id, [
+                    'from'    => $identifier,
+                    'message' => substr($messageText, 0, 50),
+                ]);
             }
-        } catch (\Exception $e) {
-            Log::error("MTProto EventHandler Error: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            // Catch ALL errors (not just \Exception) since amphp can throw Errors too
+            Log::error("MTProto EventHandler onUpdateNewMessage Error: " . $e->getMessage(), [
+                'class' => get_class($e),
+                'trace' => substr($e->getTraceAsString(), 0, 500),
+            ]);
         }
     }
 
     public function onUpdateNewChannelMessage(array $update): void
     {
-        // Delegate channel messages to same logic as direct messages
         $this->onUpdateNewMessage($update);
     }
 }
