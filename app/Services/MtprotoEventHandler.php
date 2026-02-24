@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use danog\MadelineProto\EventHandler;
-use danog\Loop\PeriodicLoop;
 use App\Models\MtprotoMessage;
 use Illuminate\Support\Facades\Log;
 
@@ -19,43 +18,11 @@ class MtprotoEventHandler extends EventHandler
     public function onStart(): void
     {
         Log::info("EventHandler started for Account " . self::$account_id);
-        
-        // Polling loop for outgoing messages
-        // PeriodicLoop v2+ requires: (callable, string $name, ?float $interval)
-        $loop = new PeriodicLoop(function () {
-            try {
-                $pending = MtprotoMessage::where('account_id', self::$account_id)
-                    ->where('direction', 'out')
-                    ->where('status', 'pending')
-                    ->get();
-
-                foreach ($pending as $msg) {
-                    Log::info("Listener processing pending reply to " . $msg->contact_identifier);
-                    
-                    // Handle phone numbers
-                    $toId = $msg->contact_identifier;
-                    if (is_numeric($toId) && strpos($toId, '+') !== 0) {
-                        $toId = '+' . $toId;
-                    }
-
-                    $this->messages->sendMessage([
-                        'peer' => $toId,
-                        'message' => $msg->message,
-                    ]);
-                    
-                    $msg->update(['status' => 'success']);
-                }
-            } catch (\Exception $e) {
-                Log::error("Listener Polling Error: " . $e->getMessage());
-            }
-        }, 'outgoing-message-poller', 1.0); // (callback, name, interval_seconds)
-        
-        $loop->start();
     }
 
     public function onUpdateNewMessage(array $update): void
     {
-        if ($update['message']['_'] === 'messageService') {
+        if (($update['message']['_'] ?? '') === 'messageService') {
             return;
         }
 
