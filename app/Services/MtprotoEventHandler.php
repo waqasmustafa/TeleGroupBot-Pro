@@ -6,7 +6,9 @@ namespace App\Services;
 
 use danog\MadelineProto\EventHandler;
 use App\Models\MtprotoMessage;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class MtprotoEventHandler extends EventHandler
 {
@@ -67,8 +69,7 @@ class MtprotoEventHandler extends EventHandler
 
             // TRY to resolve to a username to avoid split chats
             try {
-                // getInfo is async in v8 EventHandler. We try to see if we can get username.
-                // We use a short timeout or just a check to avoid hanging.
+                // getInfo is async in v8 EventHandler.
                 $info = $this->getInfo($from_id);
                 if (isset($info['User']['username']) && !empty($info['User']['username'])) {
                     $identifier = '@' . $info['User']['username'];
@@ -76,8 +77,6 @@ class MtprotoEventHandler extends EventHandler
                     $identifier = $info['User']['phone'];
                 }
             } catch (\Throwable $e) {
-                // If getInfo fails (likely due to async Fiber constraints in some environments),
-                // we fall back to the numeric ID we already have.
                 Log::debug("MTProto: getInfo failed for {$from_id}, using numeric ID.");
             }
 
@@ -101,13 +100,63 @@ class MtprotoEventHandler extends EventHandler
                     'message_time'       => $messageTime,
                     'status'             => 'success',
                 ]);
+                
                 Log::info("Captured incoming message for Account " . self::$account_id, [
                     'from'    => $identifier,
                     'message' => substr($messageText, 0, 50),
                 ]);
+
+                // SYNC NOTIFICATIONS:
+                // 1. Notify the account owner
+                // 2. Notify all Admins
+                $this->createSystemNotification($identifier, $messageText);
             }
         } catch (\Throwable $e) {
             Log::error("MTProto EventHandler onUpdateNewMessage Error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Helper to create system notifications for the CRM header.
+     */
+    protected function createSystemNotification(string $sender, string $text): void
+    {
+        try {
+            $preview = mb_substr($text, 0, 100);
+            $preview = !empty($preview) ? $preview : "[Media/Document]";
+            
+            $notifData = [
+                'title'       => "New Telegram Message",
+                'description' => "New message from {$sender}: {$preview}",
+                'created_at'  => date('Y-m-d H:i:s'),
+                'is_seen'     => '0',
+                'color_class' => 'bg-info',
+                'icon'        => 'fas fa-envelope',
+                'published'   => '1',
+                'linkable'    => '1',
+                'custom_link' => route('mtproto.inbox'),
+            ];
+
+            // 1. Target Account Owner
+            $targets = [self::$user_id];
+
+            // 2. Target all Admins
+            $adminIds = User::where('user_type', 'Admin')->pluck('id')->toArray();
+            foreach ($adminIds as $aid) {
+                if (!in_array($aid, $targets)) {
+                    $targets[] = $aid;
+                }
+            }
+
+            // Insert records for all targets
+            foreach ($targets as $targetId) {
+                $item = $notifData;
+                $item['user_id'] = $targetId;
+                DB::table('notifications')->insert($item);
+            }
+
+        } catch (\Throwable $e) {
+            Log::error("MTProto createSystemNotification Error: " . $e->getMessage());
         }
     }
 
