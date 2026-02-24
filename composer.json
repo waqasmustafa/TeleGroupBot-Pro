@@ -23,7 +23,7 @@
         "league/flysystem-aws-s3-v3": "^1.0",
         "predis/predis": "^2.0",
         "pusher/pusher-php-server": "^7.2",
-        "psr/log": "^1.0|^2.0|^3.0",
+        "psr/log": "1.1.4",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "therobfonz/laravel-mandrill-driver": "^3.1",
         "wildbit/swiftmailer-postmark": "^3.3",
