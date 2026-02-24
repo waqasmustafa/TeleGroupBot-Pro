@@ -2,7 +2,8 @@
     "name": "isolated/madelineproto",
     "description": "Isolated MadelineProto v8 for Laravel 8 compatibility",
     "require": {
-        "danog/madelineproto": "^8"
+        "danog/madelineproto": "^8",
+        "monolog/monolog": "^2.0"
     },
     "config": {
         "platform": {

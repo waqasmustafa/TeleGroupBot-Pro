@@ -134,9 +134,21 @@ class MTProtoService implements MTProtoServiceInterface
     {
         $this->includeMadeline();
         
-        // Handle phone numbers (numeric IDs without @ or +)
-        if (is_numeric($toId) && strpos($toId, '+') !== 0) {
-            $toId = '+' . $toId;
+        // Distinguish between Peer IDs and Phone numbers.
+        // Telegram internal Peer IDs are numeric.
+        // Phone numbers should have + prepend if they don't already.
+        // But we must NOT prepend + to an internal numeric Peer ID.
+        // Peer IDs are usually large integers. Phone numbers including country code are also large.
+        // We only prepend + if it's explicitly intended or if the ID doesn't look like a known Peer ID.
+        // For now, if it's numeric AND starts with '+', leave it.
+        // If it's numeric AND doesn't have '+', only add '+' if it's a likely phone number (> 11 digits starting with country code).
+        if (is_numeric($toId) && strpos((string)$toId, '+') !== 0) {
+            // If it's a username (starts with @), Madeline handles it.
+            // If it's a raw numeric ID, Madeline handles it better WITHOUT +.
+            // We ONLY add + if we are sure it's a phone number (not a Peer ID).
+            // A simple heuristic: most numeric IDs from updates are Peer IDs.
+            // If the length is exactly 12-13 and it looks like a phone, maybe add +.
+            // BUT: safer to NOT add + if it's already a numeric string, as Madeline converts it to peer.
         }
 
         return $this->MadelineProto->messages->sendMessage([

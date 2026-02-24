@@ -34,13 +34,14 @@ class SendInboxReplyJob implements ShouldQueue
 
     public function handle()
     {
-        // Give the Live Listener a small head start to pick up the 'pending' message
-        // via its polling mechanism (to avoid session lock contention).
-        sleep(2);
-
         $msg = MtprotoMessage::find($this->messageDbId);
-        if (!$msg || $msg->status !== 'pending') {
-            Log::info("SendInboxReplyJob: Message already processed or missing", ['id' => $this->messageDbId]);
+        if (!$msg) {
+            Log::error("SendInboxReplyJob: Message record missing", ['id' => $this->messageDbId]);
+            return;
+        }
+
+        if ($msg->status !== 'pending') {
+            Log::info("SendInboxReplyJob: Skipping, message status is {$msg->status}", ['id' => $this->messageDbId]);
             return;
         }
 

@@ -27,7 +27,7 @@ class MtprotoEventHandler extends EventHandler
     {
         $type = $update['_'] ?? 'unknown';
         // Only log non-noise update types
-        if (!in_array($type, ['updateUserStatus', 'updateUserTyping'])) {
+        if (!in_array($type, ['updateUserStatus', 'updateUserTyping', 'updateReadHistoryOutbox', 'updateChatUserTyping'])) {
             Log::info("MTProto Unhandled Update for Account " . self::$account_id, ['type' => $type]);
         }
     }
@@ -35,12 +35,6 @@ class MtprotoEventHandler extends EventHandler
     public function onUpdateNewMessage(array $update): void
     {
         try {
-            // Log that we entered this method (debug)
-            Log::info("MTProto onUpdateNewMessage called for Account " . self::$account_id, [
-                'msg_type' => $update['message']['_'] ?? 'unknown',
-                'out'      => $update['message']['out'] ?? null,
-            ]);
-
             if (($update['message']['_'] ?? '') === 'messageService') {
                 return;
             }
@@ -52,8 +46,7 @@ class MtprotoEventHandler extends EventHandler
                 return;
             }
 
-            // Get identifier from from_id WITHOUT calling getInfo() (avoids async issues)
-            // Handle both legacy array structure and new direct numeric IDs
+            // Get numeric ID from update
             $from_id = $message['from_id']['user_id'] ?? null;
             if (!$from_id && isset($message['from_id']) && is_numeric($message['from_id'])) {
                 $from_id = $message['from_id'];
@@ -67,12 +60,26 @@ class MtprotoEventHandler extends EventHandler
             }
 
             if (!$from_id) {
-                Log::warning("MTProto: Could not determine from_id", ['update' => json_encode($message)]);
                 return;
             }
 
-            // Use user_id as identifier (can be enriched later)
             $identifier = (string)$from_id;
+
+            // TRY to resolve to a username to avoid split chats
+            try {
+                // getInfo is async in v8 EventHandler. We try to see if we can get username.
+                // We use a short timeout or just a check to avoid hanging.
+                $info = $this->getInfo($from_id);
+                if (isset($info['User']['username']) && !empty($info['User']['username'])) {
+                    $identifier = '@' . $info['User']['username'];
+                } elseif (isset($info['User']['phone']) && !empty($info['User']['phone'])) {
+                    $identifier = $info['User']['phone'];
+                }
+            } catch (\Throwable $e) {
+                // If getInfo fails (likely due to async Fiber constraints in some environments),
+                // we fall back to the numeric ID we already have.
+                Log::debug("MTProto: getInfo failed for {$from_id}, using numeric ID.");
+            }
 
             $messageText = $message['message'] ?? '';
             $messageTime = date('Y-m-d H:i:s', $message['date'] ?? time());
@@ -100,11 +107,7 @@ class MtprotoEventHandler extends EventHandler
                 ]);
             }
         } catch (\Throwable $e) {
-            // Catch ALL errors (not just \Exception) since amphp can throw Errors too
-            Log::error("MTProto EventHandler onUpdateNewMessage Error: " . $e->getMessage(), [
-                'class' => get_class($e),
-                'trace' => substr($e->getTraceAsString(), 0, 500),
-            ]);
+            Log::error("MTProto EventHandler onUpdateNewMessage Error: " . $e->getMessage());
         }
     }
 
