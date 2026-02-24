@@ -7,6 +7,7 @@ namespace App\Services;
 use danog\MadelineProto\EventHandler;
 use App\Models\MtprotoMessage;
 use App\Models\User;
+use App\Events\MtprotoRealtimeEvent;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -91,7 +92,7 @@ class MtprotoEventHandler extends EventHandler
                 ->exists();
 
             if (!$exists) {
-                MtprotoMessage::create([
+                $newMessage = MtprotoMessage::create([
                     'user_id'            => self::$user_id,
                     'account_id'         => self::$account_id,
                     'contact_identifier' => $identifier,
@@ -110,6 +111,13 @@ class MtprotoEventHandler extends EventHandler
                 // 1. Notify the account owner
                 // 2. Notify all Admins
                 $this->createSystemNotification($identifier, $messageText);
+
+                // BROADCAST REAL-TIME MESSAGE:
+                MtprotoRealtimeEvent::dispatch(self::$user_id, 'message', [
+                    'message'    => $newMessage,
+                    'identifier' => $identifier,
+                    'account_id' => self::$account_id
+                ]);
             }
         } catch (\Throwable $e) {
             Log::error("MTProto EventHandler onUpdateNewMessage Error: " . $e->getMessage());
@@ -153,6 +161,9 @@ class MtprotoEventHandler extends EventHandler
                 $item = $notifData;
                 $item['user_id'] = $targetId;
                 DB::table('notifications')->insert($item);
+
+                // BROADCAST NOTIFICATION TO EACH TARGET:
+                MtprotoRealtimeEvent::dispatch($targetId, 'notification', $item);
             }
 
         } catch (\Throwable $e) {

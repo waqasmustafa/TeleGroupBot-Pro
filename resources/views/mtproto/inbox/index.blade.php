@@ -151,11 +151,52 @@
         });
     });
 
-    // Auto-load first contact on page load
+    // Auto-load first contact on page load spent
     $(document).ready(function() {
         let $first = $('.contact-item').first();
         if ($first.length) {
             $first.trigger('click');
+        }
+
+        // Real-time Inbox Updates
+        if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
+            global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
+                if (data.type == 'message') {
+                    let msg = data.payload.message;
+                    let identifier = data.payload.identifier;
+
+                    // 1. If this is the active chat, append message
+                    if (activeContact == identifier) {
+                        let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
+                        let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
+                        let html = `<div class="p-2 mb-2 rounded shadow-sm ${align}" style="max-width: 70%;">
+                                        <div style="white-space: pre-wrap;">${msg.message}</div>
+                                        <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}</div>
+                                    </div>`;
+                        
+                        $('#chat-messages .text-muted').remove();
+                        $('#chat-messages').append(html);
+                        scrollToBottom();
+                    }
+
+                    // 2. Update the conversation list on the left
+                    let $contactRow = $(`.contact-item[data-id="${identifier}"]`);
+                    if ($contactRow.length) {
+                        // Update time and move to top
+                        $contactRow.find('small').text(msg.message_time);
+                        $('#conversation-list').prepend($contactRow);
+                    } else {
+                        // New conversation, add to top
+                        let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">${identifier}</h6>
+                                            <small class="text-muted">${msg.message_time}</small>
+                                        </div>
+                                      </a>`;
+                        $('#conversation-list').prepend(newRow);
+                    }
+                }
+            });
         }
     });
 </script>

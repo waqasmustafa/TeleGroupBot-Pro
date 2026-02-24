@@ -285,6 +285,43 @@
         <script src="{{ asset('assets/js/common/common.js') }}"></script>
         <script src="{{ asset('assets/js/common/include.js') }}"></script>
 
+        {{-- Pusher Real-time Integration --}}
+        <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+        <script>
+            var global_pusher = null;
+            var global_mtproto_channel = null;
+
+            $(document).ready(function() {
+                if (pusher_app_key != '') {
+                    // Pusher.logToConsole = true; // Debugging
+                    global_pusher = new Pusher(pusher_app_key, {
+                        cluster: pusher_app_cluster,
+                        forceTLS: true
+                    });
+
+                    global_mtproto_channel = global_pusher.subscribe('mtproto-realtime-channel-' + auth_user_id);
+                    
+                    // Global Notification Handler
+                    global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
+                        if (data.type == 'notification') {
+                            // Increment bell count
+                            let count = parseInt($('.notification-count').text()) || 0;
+                            $('.notification-count').text(count + 1);
+
+                            // Show toastr
+                            toastr.info(data.payload.description, data.payload.title, {
+                                "positionClass": "toast-bottom-right"
+                            });
+
+                            // Play Audio
+                            let audio = document.getElementById('chatNotificationAudio2');
+                            if (audio) audio.play().catch(e => console.log('Audio play failed:', e));
+                        }
+                    });
+                }
+            });
+        </script>
+
     </body>
 
 </html>

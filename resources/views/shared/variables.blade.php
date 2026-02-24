@@ -36,6 +36,8 @@
     var auth_user_name = '{{Auth::user()->name ?? ''}}';
     var auth_user_email = '{{Auth::user()->email ?? ''}}';
     var auth_user_type = '{{Auth::user()->user_type ?? ''}}';
+    var pusher_app_key = '{{ config('broadcasting.connections.pusher.key') }}';
+    var pusher_app_cluster = '{{ config('broadcasting.connections.pusher.options.cluster') }}';
 
 
     var user_module_ids = '{{json_encode($user_module_ids)}}';

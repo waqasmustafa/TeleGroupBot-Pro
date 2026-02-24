@@ -11,6 +11,7 @@ use App\Models\MtprotoCampaign;
 use App\Models\MtprotoAccount;
 use App\Models\MtprotoMessage;
 use App\Services\MTProtoServiceInterface;
+use App\Events\MtprotoRealtimeEvent;
 use Illuminate\Support\Facades\Log;
 
 class SendMTProtoCampaignJob implements ShouldQueue
@@ -42,6 +43,14 @@ class SendMTProtoCampaignJob implements ShouldQueue
         }
 
         $campaign->update(['status' => 'processing']);
+
+        // BROADCAST STATUS CHANGE:
+        MtprotoRealtimeEvent::dispatch($campaign->user_id, 'campaign', [
+            'id' => $campaign->id,
+            'status' => 'processing',
+            'sent_count' => $campaign->sent_count,
+            'failed_count' => $campaign->failed_count
+        ]);
 
         // Get the first active account for this user
         $account = MtprotoAccount::where('user_id', $campaign->user_id)
@@ -84,6 +93,14 @@ class SendMTProtoCampaignJob implements ShouldQueue
 
                 $campaign->increment('sent_count');
 
+                // BROADCAST PROGRESS:
+                MtprotoRealtimeEvent::dispatch($campaign->user_id, 'campaign', [
+                    'id' => $campaign->id,
+                    'status' => 'processing',
+                    'sent_count' => $campaign->sent_count,
+                    'failed_count' => $campaign->failed_count
+                ]);
+
                 // Randomized Throttling (Anti-Ban) - Only sleep if not the last contact
                 if ($index < count($contacts) - 1) {
                     $base_delay = $campaign->interval_min * 60;
@@ -96,6 +113,14 @@ class SendMTProtoCampaignJob implements ShouldQueue
             } catch (\Exception $e) {
                 $campaign->increment('failed_count');
                 Log::error("Failed to send MTProto DM to {$identifier}: " . $e->getMessage());
+
+                // BROADCAST PROGRESS:
+                MtprotoRealtimeEvent::dispatch($campaign->user_id, 'campaign', [
+                    'id' => $campaign->id,
+                    'status' => 'processing',
+                    'sent_count' => $campaign->sent_count,
+                    'failed_count' => $campaign->failed_count
+                ]);
 
                 // Log failed attempt
                 MtprotoMessage::create([
@@ -130,6 +155,14 @@ class SendMTProtoCampaignJob implements ShouldQueue
         // Final status update - check fresh status in case it was paused inside the loop
         if ($campaign->fresh()->status !== 'paused') {
             $campaign->update(['status' => 'completed']);
+            
+            // BROADCAST COMPLETION:
+            MtprotoRealtimeEvent::dispatch($campaign->user_id, 'campaign', [
+                'id' => $campaign->id,
+                'status' => 'completed',
+                'sent_count' => $campaign->sent_count,
+                'failed_count' => $campaign->failed_count
+            ]);
         }
     }
 }
