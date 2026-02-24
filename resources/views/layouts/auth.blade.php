@@ -305,11 +305,39 @@
                     global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
                         if (data.type == 'notification') {
                             // Increment bell count
-                            let count = parseInt($('.notification-count').text()) || 0;
-                            $('.notification-count').text(count + 1);
+                            let $badge = $('.notification-count');
+                            let count = parseInt($badge.text()) || 0;
+                            $badge.text(count + 1);
+
+                            // Dynamically add to the dropdown list
+                            let notif = data.payload;
+                            let html = `
+                                <div class="dropdown-divider"></div>
+                                <a href="${notif.custom_link || '#'}" class="notification-mark-seen" data-id="${notif.id || ''}">
+                                    <li class="list-group-item border-0 align-items-start py-0">
+                                        <div class="avatar ${notif.color_class} me-3 align-items-center">
+                                            <span class="avatar-content"><i class="${notif.icon}"></i></span>
+                                        </div>
+                                        <div>
+                                            <h6 class='text-bold mb-0'>${notif.title}</h6>
+                                            <p class='text-xs mb-0'>${notif.description} <span class="text-muted">(Just now)</span></p>
+                                        </div>
+                                    </li>
+                                </a>`;
+                            
+                            let $list = $('#notification-list ul');
+                            if ($list.length) {
+                                $list.prepend(html);
+                            } else {
+                                // If list was empty/hidden, we might need to recreate the dropdown structure
+                                let fullDropdownHtml = `
+                                    <h6 class='pt-2 pb-0 px-4'>Notifications</h6>
+                                    <div><ul class="list-group rounded-none">${html}</ul></div>`;
+                                $('#notification-dropdown').after(`<div class="dropdown-menu dropdown-menu-end dropdown-menu-large overflow-y h-max-500px" id="notification-list">${fullDropdownHtml}</div>`);
+                            }
 
                             // Show toastr
-                            toastr.info(data.payload.description, data.payload.title, {
+                            toastr.info(notif.description, notif.title, {
                                 "positionClass": "toast-bottom-right"
                             });
 

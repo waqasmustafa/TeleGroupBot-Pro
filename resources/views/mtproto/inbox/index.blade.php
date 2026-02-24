@@ -54,12 +54,12 @@
     let activeContact = null;
     const baseUrl = "{{ url('/') }}";
 
-    $('.contact-item').on('click', function(e) {
+    $(document).on('click', '.contact-item', function(e) {
         e.preventDefault();
         $('.contact-item').removeClass('active bg-light');
         $(this).addClass('active bg-light');
         
-        activeContact = $(this).data('id');
+        activeContact = $(this).data('id').toString();
         $('#chat-title').text('Chat with ' + activeContact);
         $('#reply-form').removeClass('d-none');
         loadMessages(activeContact);
@@ -166,7 +166,8 @@
                     let identifier = data.payload.identifier;
 
                     // 1. If this is the active chat, append message
-                    if (activeContact == identifier) {
+                    // Fuzzy matching: "123456" == "@username" if that's how it's stored
+                    if (activeContact && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
                         let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
                         let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
                         let html = `<div class="p-2 mb-2 rounded shadow-sm ${align}" style="max-width: 70%;">
@@ -174,7 +175,7 @@
                                         <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}</div>
                                     </div>`;
                         
-                        $('#chat-messages .text-muted').remove();
+                        $('#chat-messages .text-center, #chat-messages .text-muted').remove();
                         $('#chat-messages').append(html);
                         scrollToBottom();
                     }
