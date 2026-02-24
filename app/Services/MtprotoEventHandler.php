@@ -20,6 +20,22 @@ class MtprotoEventHandler extends EventHandler
         Log::info("EventHandler started for Account " . self::$account_id);
     }
 
+    /**
+     * DEBUG: Catch ALL update types to log what is actually being received.
+     * Remove this method once the correct update type is identified.
+     */
+    public function onAny(array $update): void
+    {
+        $type = $update['_'] ?? 'unknown';
+        Log::info("MTProto Raw Update received for Account " . self::$account_id, [
+            'type'    => $type,
+            'out'     => $update['message']['out'] ?? null,
+            'msg'     => isset($update['message']['message'])
+                         ? substr($update['message']['message'], 0, 50)
+                         : null,
+        ]);
+    }
+
     public function onUpdateNewMessage(array $update): void
     {
         if (($update['message']['_'] ?? '') === 'messageService') {
@@ -63,5 +79,11 @@ class MtprotoEventHandler extends EventHandler
         } catch (\Exception $e) {
             Log::error("MTProto EventHandler Error: " . $e->getMessage());
         }
+    }
+
+    public function onUpdateNewChannelMessage(array $update): void
+    {
+        // Delegate channel messages to same logic as direct messages
+        $this->onUpdateNewMessage($update);
     }
 }
