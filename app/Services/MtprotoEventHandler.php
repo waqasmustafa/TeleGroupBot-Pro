@@ -53,9 +53,18 @@ class MtprotoEventHandler extends EventHandler
             }
 
             // Get identifier from from_id WITHOUT calling getInfo() (avoids async issues)
-            $from_id = $message['from_id']['user_id']
-                    ?? $message['peer_id']['user_id']
-                    ?? null;
+            // Handle both legacy array structure and new direct numeric IDs
+            $from_id = $message['from_id']['user_id'] ?? null;
+            if (!$from_id && isset($message['from_id']) && is_numeric($message['from_id'])) {
+                $from_id = $message['from_id'];
+            }
+            
+            if (!$from_id) {
+                $from_id = $message['peer_id']['user_id'] ?? null;
+                if (!$from_id && isset($message['peer_id']) && is_numeric($message['peer_id'])) {
+                    $from_id = $message['peer_id'];
+                }
+            }
 
             if (!$from_id) {
                 Log::warning("MTProto: Could not determine from_id", ['update' => json_encode($message)]);
