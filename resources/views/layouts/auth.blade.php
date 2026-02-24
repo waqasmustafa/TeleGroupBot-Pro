@@ -293,7 +293,7 @@
 
             $(document).ready(function() {
                 if (pusher_app_key != '') {
-                    // Pusher.logToConsole = true; // Debugging
+                    Pusher.logToConsole = true; // Debugging enabled
                     global_pusher = new Pusher(pusher_app_key, {
                         cluster: pusher_app_cluster,
                         forceTLS: true
