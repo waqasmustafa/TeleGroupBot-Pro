@@ -37,6 +37,16 @@
                             </select>
                         </div>
                         <div class="form-group mb-3">
+                            <label>{{__('Select Sender Account')}}</label>
+                            <select name="account_id" class="form-control" required>
+                                <option value="">{{__('Select Account')}}</option>
+                                @foreach($active_accounts as $acc)
+                                    <option value="{{$acc->id}}">{{$acc->phone}}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">{{__('This account will be used to send messages.')}}</small>
+                        </div>
+                        <div class="form-group mb-3">
                             <label>{{__('Time Interval (Minutes)')}}</label>
                             <input type="number" name="interval_min" class="form-control" value="5" min="1">
                             <small class="text-muted">{{__('Recommended: 1-5 mins to avoid bans.')}}</small>

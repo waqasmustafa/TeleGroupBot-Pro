@@ -279,11 +279,16 @@ class MTProtoController extends Home
             return $q->where('user_id', $this->user_id);
         })->get();
 
+        $active_accounts = \App\Models\MtprotoAccount::where('status', '1')->when(!$this->is_admin, function($q) {
+            return $q->where('user_id', $this->user_id);
+        })->get();
+
         $data = [
             'body' => 'mtproto.campaigns.index',
             'campaigns' => $campaigns,
             'lists' => $lists,
-            'templates' => $templates
+            'templates' => $templates,
+            'active_accounts' => $active_accounts
         ];
         return $this->viewcontroller($data);
     }
@@ -309,6 +314,7 @@ class MTProtoController extends Home
             'campaign_name' => 'required',
             'list_id' => 'required',
             'template_id' => 'required',
+            'account_id' => 'required',
             'interval_min' => 'required|integer|min:1'
         ]);
 
@@ -316,6 +322,7 @@ class MTProtoController extends Home
 
         $campaign = \App\Models\MtprotoCampaign::create([
             'user_id' => $this->user_id,
+            'account_id' => $request->account_id,
             'list_id' => $request->list_id,
             'template_id' => $request->template_id,
             'campaign_name' => $request->campaign_name,
@@ -346,15 +353,19 @@ class MTProtoController extends Home
         $query = \App\Models\MtprotoMessage::query();
         if(!$this->is_admin) $query->where('user_id', $this->user_id);
 
-        // Get unique contact identifiers from messages
-        $conversations = $query->select('contact_identifier', DB::raw('MAX(message_time) as last_msg'))
-            ->groupBy('contact_identifier')
+        $conversations = $query->select('contact_identifier', 'account_id', DB::raw('MAX(message_time) as last_msg'))
+            ->groupBy('contact_identifier', 'account_id')
             ->orderBy('last_msg', 'desc')
             ->get();
 
+        $active_accounts = \App\Models\MtprotoAccount::where('status', '1')->when(!$this->is_admin, function($q) {
+            return $q->where('user_id', $this->user_id);
+        })->get();
+
         $data = [
             'body' => 'mtproto.inbox.index',
-            'conversations' => $conversations
+            'conversations' => $conversations,
+            'active_accounts' => $active_accounts
         ];
         return $this->viewcontroller($data);
     }

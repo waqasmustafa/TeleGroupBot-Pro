@@ -52,14 +52,24 @@ class SendMTProtoCampaignJob implements ShouldQueue
             'failed_count' => $campaign->failed_count
         ]);
 
-        // Get the first active account for this user
-        $account = MtprotoAccount::where('user_id', $campaign->user_id)
-            ->where('status', '1')
-            ->first();
+        // Get the designated account for this campaign
+        $account = null;
+        if ($campaign->account_id) {
+            $account = MtprotoAccount::where('id', $campaign->account_id)
+                ->where('status', '1')
+                ->first();
+        }
+
+        // Fallback for legacy campaigns or if not specified (though UI now requires it)
+        if (!$account) {
+            $account = MtprotoAccount::where('user_id', $campaign->user_id)
+                ->where('status', '1')
+                ->first();
+        }
 
         if (!$account) {
             $campaign->update(['status' => 'failed']);
-            Log::error("MTProto Account not found for user " . $campaign->user_id);
+            Log::error("MTProto Account not found for campaign " . $campaign->id);
             return;
         }
 

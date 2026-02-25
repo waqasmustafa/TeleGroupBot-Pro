@@ -34,20 +34,34 @@ class MTProtoService implements MTProtoServiceInterface
         }
     }
 
-    private function getSettings($api_id = null, $api_hash = null)
+    private function getSettings($api_id = null, $api_hash = null, $proxy = null)
     {
         $settings = new \danog\MadelineProto\Settings();
         
-        // Suppress browser output (crucial for Windows/XAMPP/CLI)
+        // Suppress browser output
         $settings->getLogger()->setType(\danog\MadelineProto\Logger::FILE_LOGGER);
         $settings->getLogger()->setExtra(storage_path('logs/madeline.log'));
         
-        // Connection settings (v8 compatible)
+        // Connection settings
         $connectionSettings = new \danog\MadelineProto\Settings\Connection();
         $connectionSettings->setIpv6(false); 
         $connectionSettings->setUseDoH(true); 
         $connectionSettings->setObfuscated(true);
         $connectionSettings->setProtocol(\danog\MadelineProto\Stream\MTProtoTransport\IntermediatePaddedStream::class);
+
+        // Apply Proxy if available
+        if ($proxy && !empty($proxy['host'])) {
+            $proxySettings = new \danog\MadelineProto\Settings\Proxy();
+            $proxySettings->setType(\danog\MadelineProto\Settings\Proxy::SOCKS5); // Defaulting to SOCKS5 as it's most common for TG
+            $proxySettings->setAddress($proxy['host']);
+            $proxySettings->setPort((int)$proxy['port']);
+            if (!empty($proxy['user'])) {
+                $proxySettings->setUsername($proxy['user']);
+                $proxySettings->setPassword($proxy['pass'] ?? '');
+            }
+            $connectionSettings->setProxies([$proxySettings]);
+        }
+
         $settings->setConnection($connectionSettings);
         
         $appInfo = new \danog\MadelineProto\Settings\AppInfo();
@@ -77,7 +91,14 @@ class MTProtoService implements MTProtoServiceInterface
             \Log::info("MTProto loading session in setAccount", ['path' => $session_file]);
         }
         
-        $settings = $this->getSettings($account->api_id, $account->api_hash);
+        $proxy = [
+            'host' => $account->proxy_host,
+            'port' => $account->proxy_port,
+            'user' => $account->proxy_user,
+            'pass' => $account->proxy_pass
+        ];
+
+        $settings = $this->getSettings($account->api_id, $account->api_hash, $proxy);
         $this->MadelineProto = new \danog\MadelineProto\API($session_file, $settings);
         return $this;
     }
@@ -195,7 +216,13 @@ class MTProtoService implements MTProtoServiceInterface
         \App\Services\MtprotoEventHandler::$api_hash   = $account->api_hash;
 
         $session_file = $this->session_dir . 'session_' . $account->id . '.madeline';
-        $settings = $this->getSettings($account->api_id, $account->api_hash);
+        $proxy = [
+            'host' => $account->proxy_host,
+            'port' => $account->proxy_port,
+            'user' => $account->proxy_user,
+            'pass' => $account->proxy_pass
+        ];
+        $settings = $this->getSettings($account->api_id, $account->api_hash, $proxy);
 
         \Illuminate\Support\Facades\Log::info("Starting MTProto Live Listener for Account {$account->id}", ['session' => $session_file]);
         

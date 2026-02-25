@@ -25,4 +25,9 @@ class MtprotoCampaign extends Model
     {
         return $this->belongsTo(MtprotoTemplate::class, 'template_id');
     }
+
+    public function account()
+    {
+        return $this->belongsTo(MtprotoAccount::class, 'account_id');
+    }
 }

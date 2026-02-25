@@ -6,14 +6,26 @@
         <h3>{{__('Telegram CRM Inbox')}}</h3>
     </div>
 
-    <div class="row" style="height: 70vh;">
+    <div class="row" style="height: 75vh;">
         <!-- Conversation List -->
-        <div class="col-md-4 h-100">
-            <div class="card h-100 overflow-auto">
-                <div class="card-header"><h4>{{__('Chats')}}</h4></div>
+        <div class="col-md-4 h-100 d-flex flex-column">
+            <!-- Account Tabs -->
+            <ul class="nav nav-tabs mb-2" id="accountTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active py-2 px-3" id="all-tab" data-bs-toggle="tab" href="#all" role="tab" data-account-id="all">{{__('All')}}</a>
+                </li>
+                @foreach($active_accounts as $acc)
+                    <li class="nav-item">
+                        <a class="nav-link py-2 px-3" id="acc-tab-{{$acc->id}}" data-bs-toggle="tab" href="#acc-{{$acc->id}}" role="tab" data-account-id="{{$acc->id}}">{{ substr($acc->phone, -4) }}</a>
+                    </li>
+                @endforeach
+            </ul>
+
+            <div class="card flex-grow-1 overflow-auto">
+                <div class="card-header py-2"><h4>{{__('Chats')}}</h4></div>
                 <div class="list-group list-group-flush" id="conversation-list">
                     @foreach($conversations as $chat)
-                        <a href="#" class="list-group-item list-group-item-action contact-item" data-id="{{$chat->contact_identifier}}">
+                        <a href="#" class="list-group-item list-group-item-action contact-item" data-id="{{$chat->contact_identifier}}" data-account-id="{{$chat->account_id}}">
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">{{$chat->contact_identifier}}</h6>
                                 <small class="text-muted">{{$chat->last_msg}}</small>
@@ -27,20 +39,21 @@
         <!-- Chat Window -->
         <div class="col-md-8 h-100">
             <div class="card h-100">
-                <div class="card-header bg-light"><h5 id="chat-title">{{__('Select a chat to start messaging')}}</h5></div>
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 id="chat-title" class="mb-0">{{__('Select a chat')}}</h5>
+                    <span id="active-account-badge" class="badge bg-info d-none"></span>
+                </div>
                 <div class="card-body overflow-auto d-flex flex-column" id="chat-messages" style="background: #f0f2f5;">
                     <!-- Messages will appear here -->
                 </div>
                 <div class="card-footer">
                     <form id="reply-form" class="d-none">
+                        <input type="hidden" id="active-account-id" value="">
                         <div class="input-group">
                             <input type="text" id="message-input" class="form-control" placeholder="{{__('Type your reply...')}}">
                             <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i></button>
                         </div>
                     </form>
-                    @if($is_admin)
-                        <div class="small text-muted mt-1"><i class="fas fa-info-circle"></i> {{__('Admin Mode: Replying from the first active system account.')}}</div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -52,7 +65,19 @@
 <script>
     "use strict";
     let activeContact = null;
+    let activeAccount = null;
     const baseUrl = "{{ url('/') }}";
+
+    // Tab Filtering
+    $('#accountTabs a').on('click', function (e) {
+        let accountId = $(this).data('account-id');
+        if (accountId === 'all') {
+            $('.contact-item').show();
+        } else {
+            $('.contact-item').hide();
+            $(`.contact-item[data-account-id="${accountId}"]`).show();
+        }
+    });
 
     $(document).on('click', '.contact-item', function(e) {
         e.preventDefault();
@@ -60,7 +85,12 @@
         $(this).addClass('active bg-light');
         
         activeContact = $(this).data('id').toString();
+        activeAccount = $(this).data('account-id');
+        
+        $('#active-account-id').val(activeAccount);
         $('#chat-title').text('Chat with ' + activeContact);
+        $('#active-account-badge').text('Account ID: ' + activeAccount).removeClass('d-none');
+        
         $('#reply-form').removeClass('d-none');
         loadMessages(activeContact);
     });
@@ -107,6 +137,7 @@
     $('#reply-form').on('submit', function(e) {
         e.preventDefault();
         let message = $('#message-input').val().trim();
+        let accountId = $('#active-account-id').val();
         if(!message || !activeContact) return;
 
         let $btn = $(this).find('button[type="submit"]');
@@ -121,10 +152,11 @@
             data: {
                 _token: "{{csrf_token()}}",
                 identifier: activeContact,
-                message: message
+                message: message,
+                account_id: accountId
             },
             success: function(res) {
-                $input.val('').prop('disabled', false);
+                $input.val('').prop('disabled', false).focus();
                 $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
 
                 if(res.success && res.message_obj) {
@@ -134,7 +166,6 @@
                                     <div style="white-space: pre-wrap;">${msg.message}</div>
                                     <div class="text-end small text-white-50" style="font-size:0.7rem;">${timeLabel}</div>
                                 </div>`;
-                    // Remove "No messages found" placeholder if present
                     $('#chat-messages .text-muted').remove();
                     $('#chat-messages').append(html);
                     scrollToBottom();
@@ -151,11 +182,21 @@
         });
     });
 
-    // Auto-load first contact on page load spent
     $(document).ready(function() {
+        // Auto-load first contact
         let $first = $('.contact-item').first();
-        if ($first.length) {
-            $first.trigger('click');
+        if ($first.length) { $first.trigger('click'); }
+
+        // Check for URL parameters (from notifications)
+        let urlParams = new URLSearchParams(window.location.search);
+        let targetAccount = urlParams.get('account_id');
+        let targetContact = urlParams.get('contact');
+        
+        if (targetAccount) {
+            $(`#acc-tab-${targetAccount}`).trigger('click');
+            if (targetContact) {
+                $(`.contact-item[data-id="${targetContact}"][data-account-id="${targetAccount}"]`).trigger('click');
+            }
         }
 
         // Real-time Inbox Updates
@@ -164,10 +205,10 @@
                 if (data.type == 'message') {
                     let msg = data.payload.message;
                     let identifier = data.payload.identifier;
+                    let accountId = msg.account_id;
 
                     // 1. If this is the active chat, append message
-                    // Fuzzy matching: "123456" == "@username" if that's how it's stored
-                    if (activeContact && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
+                    if (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
                         let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
                         let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
                         let html = `<div class="p-2 mb-2 rounded shadow-sm ${align}" style="max-width: 70%;">
@@ -181,20 +222,24 @@
                     }
 
                     // 2. Update the conversation list on the left
-                    let $contactRow = $(`.contact-item[data-id="${identifier}"]`);
+                    let $contactRow = $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`);
                     if ($contactRow.length) {
-                        // Update time and move to top
                         $contactRow.find('small').text(msg.message_time);
                         $('#conversation-list').prepend($contactRow);
                     } else {
-                        // New conversation, add to top
-                        let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}">
+                        let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}" data-account-id="${accountId}">
                                         <div class="d-flex w-100 justify-content-between">
                                             <h6 class="mb-1">${identifier}</h6>
                                             <small class="text-muted">${msg.message_time}</small>
                                         </div>
                                       </a>`;
                         $('#conversation-list').prepend(newRow);
+                        
+                        // Apply current filter
+                        let activeTabAccountId = $('#accountTabs a.active').data('account-id');
+                        if (activeTabAccountId !== 'all' && activeTabAccountId != accountId) {
+                            $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).hide();
+                        }
                     }
                 }
             });

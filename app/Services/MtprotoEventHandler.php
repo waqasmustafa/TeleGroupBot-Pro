@@ -147,7 +147,7 @@ class MtprotoEventHandler extends EventHandler
                 'icon'        => 'fas fa-envelope',
                 'published'   => '1',
                 'linkable'    => '1',
-                'custom_link' => route('mtproto.inbox'),
+                'custom_link' => route('mtproto.inbox') . "?account_id=" . self::$account_id . "&contact=" . urlencode($sender),
             ];
 
             // 1. Target Account Owner
