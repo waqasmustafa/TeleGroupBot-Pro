@@ -36,6 +36,7 @@ else {
 
 Route::get('usage-log',[Member::class,'usage_log'])->middleware(['auth'])->name('usage-log');
 Route::post('notification/mark-seen',[Member::class,'notification_mark_seen'])->middleware(['auth'])->name('notification-mark-seen');
+Route::post('notification/mark-all-seen',[Member::class,'notification_mark_all_seen'])->middleware(['auth'])->name('notification-mark-all-seen');
 
 Route::group(['middleware' => ['auth']], function () {
     Route::get('account',[Member::class,'account'])->name('account');

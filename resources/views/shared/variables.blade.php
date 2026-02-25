@@ -52,6 +52,7 @@
     var global_url_payment_success = '{{ route('transaction-log') }}'+'?action=success';
     var global_url_payment_cancel = '{{ route('transaction-log') }}'+'?action=cancel';
     var global_url_notification_mark_seen = '{{ route('notification-mark-seen') }}';
+    var global_url_notification_mark_all_seen = '{{ route('notification-mark-all-seen') }}';
 
 
     var new_request = '{{ __('New Request') }}';

@@ -940,6 +940,42 @@ class Member extends Home
         return $data;
     }
 
+    public function notification_mark_all_seen(Request $request)
+    {
+        $user_id = $this->user_id;
+        
+        // Mark all user-specific notifications as seen
+        DB::table("notifications")
+            ->where('user_id', $user_id)
+            ->where('is_seen', '0')
+            ->update([
+                'is_seen' => '1',
+                'last_seen_at' => date('Y-m-d H:i:s')
+            ]);
+            
+        // Also handle global notifications (seen_by list)
+        $global_notifications = DB::table("notifications")
+            ->where('user_id', '0')
+            ->get();
+
+        foreach ($global_notifications as $notif) {
+            $seen_by = explode(',', (string)$notif->seen_by);
+            if (!in_array($user_id, $seen_by)) {
+                $seen_by[] = $user_id;
+                $seen_by = array_filter(array_unique($seen_by));
+                
+                DB::table("notifications")
+                    ->where('id', $notif->id)
+                    ->update([
+                        'seen_by' => implode(',', $seen_by),
+                        'last_seen_at' => date('Y-m-d H:i:s')
+                    ]);
+            }
+        }
+
+        return response()->json(array("status"=>"1","message"=>__("All notifications have been marked as seen.")));
+    }
+
     public function notification_mark_seen(Request $request)
     {
         $id = $request->id;

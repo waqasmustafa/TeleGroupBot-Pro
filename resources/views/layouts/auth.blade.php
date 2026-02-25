@@ -177,7 +177,10 @@
                                 </a>
                                 @if(count($notifications)>0)
                                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-md-end dropdown-menu-large overflow-y h-max-500px"  id="notification-list">
-                                    <h6 class='pt-2 pb-0 px-4'>{{ __('Notifications') }}</h6>
+                                    <div class="d-flex justify-content-between align-items-center pt-2 pb-0 px-4">
+                                        <h6 class="mb-0">{{ __('Notifications') }}</h6>
+                                        <a href="#" id="mark-all-seen-btn" class="text-xs text-primary">{{ __('Mark all as read') }}</a>
+                                    </div>
                                     <div>
                                         <ul class="list-group rounded-none">
                                         @foreach($notifications as $row)
@@ -339,6 +342,31 @@
                             let audio = document.getElementById('chatNotificationAudio2');
                             if (audio) audio.play().catch(e => console.log('Audio play failed:', e));
                         }
+                    });
+
+                    // Mark all as read handler
+                    $(document).on('click', '#mark-all-seen-btn', function(e) {
+                        e.preventDefault();
+                        let $btn = $(this);
+                        
+                        $.ajax({
+                            method: 'post',
+                            dataType: 'JSON',
+                            url: global_url_notification_mark_all_seen,
+                            beforeSend: function (xhr) {
+                                xhr.setRequestHeader('X-CSRF-TOKEN', csrf_token);
+                            },
+                            success: function (response) {
+                                if (response.status == '1') {
+                                    $('.notification-count').text('0');
+                                    $('#notification-list ul').empty();
+                                    $('#notification-list').hide();
+                                    toastr.success(response.message, global_lang_success, {
+                                        "positionClass": "toast-bottom-right"
+                                    });
+                                }
+                            }
+                        });
                     });
                 }
             });
