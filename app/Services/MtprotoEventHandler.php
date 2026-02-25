@@ -29,12 +29,9 @@ class MtprotoEventHandler extends EventHandler
     public function onAny(array $update): void
     {
         $type = $update['_'] ?? 'unknown';
-        // DEBUG: Every update received
-        Log::debug("MTProto Update Received for Account " . self::$account_id . ": " . $type);
-        
-        // Only log full details for important types
-        if (in_array($type, ['updateReadHistoryOutbox', 'updateReadHistoryInbox', 'updateNewMessage'])) {
-            Log::info("MTProto SUCCESS-DEBUG: Update Details", ['type' => $type, 'update' => $update]);
+        // Only log non-noise update types
+        if (!in_array($type, ['updateUserStatus', 'updateUserTyping', 'updateReadHistoryOutbox', 'updateChatUserTyping'])) {
+            Log::info("MTProto Unhandled Update for Account " . self::$account_id, ['type' => $type]);
         }
     }
 
@@ -191,10 +188,19 @@ class MtprotoEventHandler extends EventHandler
      */
     public function onUpdateReadHistoryOutbox(array $update): void
     {
-        Log::info("MTProto SUCCESS-DEBUG: onUpdateReadHistoryOutbox Triggered", $update);
         try {
-            $peerId = $update['peer']['user_id'] ?? ($update['peer']['chat_id'] ?? ($update['peer']['channel_id'] ?? null));
-            if (!$peerId) return;
+            // Fix: Peer can be direct ID or nested object
+            $peerId = null;
+            if (is_numeric($update['peer'] ?? null)) {
+                $peerId = $update['peer'];
+            } else {
+                $peerId = $update['peer']['user_id'] ?? ($update['peer']['chat_id'] ?? ($update['peer']['channel_id'] ?? null));
+            }
+
+            if (!$peerId) {
+                Log::debug("MTProto Read Receipt: Could not find Peer ID in update", $update);
+                return;
+            }
 
             $maxId = $update['max_id'];
             
