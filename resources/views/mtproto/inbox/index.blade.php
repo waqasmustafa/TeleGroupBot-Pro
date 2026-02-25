@@ -208,71 +208,86 @@
         }
 
         // Real-time Inbox Updates
-        if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
-            global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
-                if (data.type == 'message') {
-                    let msg = data.payload.message;
-                    let identifier = data.payload.identifier;
-                    let accountId = msg.account_id;
+        function bindMtprotoEvents() {
+            if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
+                console.log("MTProto Real-time: Channel found, binding events...");
+                global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
+                    console.log("MTProto Real-time Event received:", data.type, data);
+                    
+                    if (data.type == 'message') {
+                        let msg = data.payload.message;
+                        let identifier = data.payload.identifier;
+                        let accountId = msg.account_id;
 
-                    // 1. If this is the active chat, append message
-                    if (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
-                        let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
-                        let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
-                        let ticks = '';
-                        if (msg.direction === 'out') {
-                            ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
-                        }
-                        let html = `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item" data-id="${msg.id}" style="max-width: 70%;">
-                                        <div style="white-space: pre-wrap;">${msg.message}</div>
-                                        <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
-                                    </div>`;
-                        
-                        $('#chat-messages .text-center, #chat-messages .text-muted').remove();
-                        $('#chat-messages').append(html);
-                        scrollToBottom();
-                    }
-
-                    // 2. Update the conversation list on the left
-                    let $contactRow = $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`);
-                    if ($contactRow.length) {
-                        $contactRow.find('small').text(msg.message_time);
-                        $('#conversation-list').prepend($contactRow);
-                    } else {
-                        let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}" data-account-id="${accountId}">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1">${identifier}</h6>
-                                            <small class="text-muted">${msg.message_time}</small>
-                                        </div>
-                                      </a>`;
-                        $('#conversation-list').prepend(newRow);
-                        
-                        // Apply current filter
-                        let activeTabAccountId = $('#accountTabs a.active').data('account-id');
-                        if (activeTabAccountId !== 'all' && activeTabAccountId != accountId) {
-                            $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).hide();
-                        }
-                    }
-                }
-
-                if (data.type == 'message-read') {
-                    // Update ticks for messages in the payload
-                    let messageIds = data.payload.message_ids;
-                    let accountId = data.payload.account_id;
-
-                    if (activeAccount == accountId) {
-                        messageIds.forEach(function(id) {
-                            let $msg = $(`.msg-item[data-id="${id}"]`);
-                            if ($msg.length) {
-                                $msg.find('.tick-icon')
-                                    .removeClass('fa-check text-white-50')
-                                    .addClass('fa-check-double text-success');
+                        // 1. If this is the active chat, append message
+                        if (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
+                            let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
+                            let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
+                            let ticks = '';
+                            if (msg.direction === 'out') {
+                                ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
                             }
-                        });
+                            let html = `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item" data-id="${msg.id}" style="max-width: 70%;">
+                                            <div style="white-space: pre-wrap;">${msg.message}</div>
+                                            <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
+                                        </div>`;
+                            
+                            $('#chat-messages .text-center, #chat-messages .text-muted').remove();
+                            $('#chat-messages').append(html);
+                            scrollToBottom();
+                        }
+
+                        // 2. Update the conversation list on the left
+                        let $contactRow = $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`);
+                        if ($contactRow.length) {
+                            $contactRow.find('small').text(msg.message_time);
+                            $('#conversation-list').prepend($contactRow);
+                        } else {
+                            let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}" data-account-id="${accountId}">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">${identifier}</h6>
+                                                <small class="text-muted">${msg.message_time}</small>
+                                            </div>
+                                          </a>`;
+                            $('#conversation-list').prepend(newRow);
+                            
+                            // Apply current filter
+                            let activeTabAccountId = $('#accountTabs a.active').data('account-id');
+                            if (activeTabAccountId !== 'all' && activeTabAccountId != accountId) {
+                                $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).hide();
+                            }
+                        }
                     }
-                }
-            });
+
+                    if (data.type == 'message-read') {
+                        let messageIds = data.payload.message_ids;
+                        let accountId = data.payload.account_id;
+                        let identifier = data.payload.identifier;
+
+                        console.log("Processing message-read for identity:", identifier, "messages:", messageIds);
+
+                        // Update ticks if the account matches
+                        if (activeAccount == accountId) {
+                            messageIds.forEach(function(id) {
+                                let $msg = $(`.msg-item[data-id="${id}"]`);
+                                if ($msg.length) {
+                                    $msg.find('.tick-icon')
+                                        .removeClass('fa-check text-white-50')
+                                        .addClass('fa-check-double text-success');
+                                }
+                            });
+                        }
+                    }
+                });
+            } else {
+                // Try again in 500ms if not ready
+                console.warn("MTProto Real-time: Channel not ready, retrying in 500ms...");
+                setTimeout(bindMtprotoEvents, 500);
+            }
         }
+
+        // Start waiting for the channel
+        bindMtprotoEvents();
     });
 </script>
 @endpush
