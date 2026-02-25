@@ -67,11 +67,19 @@ class MTProtoController extends Home
             );
 
             $session_name = 'session_' . $account->id;
+            $proxy = [
+                'host' => $request->proxy_host,
+                'port' => $request->proxy_port,
+                'user' => $request->proxy_user,
+                'pass' => $request->proxy_pass
+            ];
+
             $session_file = $this->mtproto->login(
                 $request->phone,
                 $request->api_id,
                 $request->api_hash,
-                $session_name
+                $session_name,
+                $proxy
             );
 
             // Store info in session for next step

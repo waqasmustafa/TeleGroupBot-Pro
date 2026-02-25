@@ -111,7 +111,7 @@ class MTProtoService implements MTProtoServiceInterface
         return $this;
     }
 
-    public function login($phone, $api_id, $api_hash, $session_name = null)
+    public function login($phone, $api_id, $api_hash, $session_name = null, $proxy = null)
     {
         $this->includeMadeline();
         \Log::info("MTProto Login Start (v8 Isolated)", ['phone' => $phone, 'api_id' => $api_id]);
@@ -119,9 +119,9 @@ class MTProtoService implements MTProtoServiceInterface
         $session_file = $this->session_dir . ($session_name ?: 'session_temp_' . time()) . '.madeline';
         \Log::info("Session file path generated", ['path' => $session_file]);
         
-        $settings = $this->getSettings($api_id, $api_hash);
+        $settings = $this->getSettings($api_id, $api_hash, $proxy);
         
-        \Log::info("Isolated v8 Settings initialized (Layer 220 Support)");
+        \Log::info("Isolated v8 Settings initialized (Layer 220 Support) with Proxy: " . ($proxy['host'] ?? 'None'));
         
         try {
             \Log::info("Initializing MadelineProto v8 Isolated API...");
