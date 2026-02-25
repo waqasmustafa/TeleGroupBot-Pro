@@ -181,4 +181,45 @@ class MtprotoEventHandler extends EventHandler
     {
         $this->onUpdateNewMessage($update);
     }
+
+    /**
+     * Handle read receipts for outgoing messages.
+     * Fires when the other person reads our messages.
+     */
+    public function onUpdateReadHistoryOutbox(array $update): void
+    {
+        try {
+            $peerId = $update['peer']['user_id'] ?? ($update['peer']['chat_id'] ?? ($update['peer']['channel_id'] ?? null));
+            if (!$peerId) return;
+
+            $maxId = $update['max_id'];
+            
+            // Find messages for this account and peer that are NOT yet read 
+            // and have a telegram_message_id <= the read max_id.
+            $messagesToUpdate = MtprotoMessage::where('account_id', self::$account_id)
+                ->where('direction', 'out')
+                ->where('is_read', false)
+                ->whereNotNull('telegram_message_id')
+                ->where('telegram_message_id', '<=', $maxId)
+                ->get();
+
+            if ($messagesToUpdate->count() > 0) {
+                $ids = $messagesToUpdate->pluck('id')->toArray();
+                
+                MtprotoMessage::whereIn('id', $ids)->update(['is_read' => true]);
+
+                Log::info("MTProto Read Receipt: Updated " . count($ids) . " messages as read for Account " . self::$account_id);
+
+                // Broadcast to update UI ticks in real-time
+                broadcast(new MtprotoRealtimeEvent(self::$user_id, 'message-read', [
+                    'message_ids' => $ids,
+                    'account_id'  => self::$account_id,
+                    'peer_id'     => $peerId,
+                    'max_id'      => $maxId
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::error("MTProto EventHandler onUpdateReadHistoryOutbox Error: " . $e->getMessage());
+        }
+    }
 }

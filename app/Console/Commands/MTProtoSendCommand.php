@@ -35,10 +35,17 @@ class MTProtoSendCommand extends Command
         $this->info("Sending message to {$identifier} via account #{$accountId}...");
 
         try {
-            $mtproto->setAccount($account)->sendMessage($identifier, $msgRecord->message);
-            MtprotoMessage::where('id', $messageId)->update(['status' => 'success']);
-            $this->info("Message sent successfully.");
-            Log::info("mtproto:send - Message #{$messageId} sent to {$identifier}");
+            $result = $mtproto->setAccount($account)->sendMessage($identifier, $msgRecord->message);
+            
+            $telegram_id = $result['id'] ?? null;
+            
+            MtprotoMessage::where('id', $messageId)->update([
+                'status' => 'success',
+                'telegram_message_id' => $telegram_id
+            ]);
+
+            $this->info("Message sent successfully. Telegram ID: " . ($telegram_id ?? 'N/A'));
+            Log::info("mtproto:send - Message #{$messageId} sent to {$identifier}, Telegram ID: {$telegram_id}");
             return 0;
         } catch (\Exception $e) {
             MtprotoMessage::where('id', $messageId)->update(['status' => 'failed']);

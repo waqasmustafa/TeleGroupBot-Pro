@@ -118,9 +118,16 @@
                     messages.forEach(function(msg) {
                         let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
                         let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
-                        html += `<div class="p-2 mb-2 rounded shadow-sm ${align}" style="max-width: 70%;">
+                        let ticks = '';
+                        if (msg.direction === 'out') {
+                            ticks = msg.is_read 
+                                ? ' <i class="fa fa-check-double text-success ms-1 tick-icon"></i>' 
+                                : ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
+                        }
+                        
+                        html += `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item" data-id="${msg.id}" style="max-width: 70%;">
                                     <div style="white-space: pre-wrap;">${msg.message}</div>
-                                    <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}</div>
+                                    <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
                                  </div>`;
                     });
                 }
@@ -161,10 +168,11 @@
 
                 if(res.success && res.message_obj) {
                     let msg = res.message_obj;
-                    let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
-                    let html = `<div class="p-2 mb-2 rounded shadow-sm align-self-end bg-primary text-white" style="max-width: 70%;">
+                    let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
+                    let ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
+                    let html = `<div class="p-2 mb-2 rounded shadow-sm align-self-end bg-primary text-white msg-item" data-id="${msg.id}" style="max-width: 70%;">
                                     <div style="white-space: pre-wrap;">${msg.message}</div>
-                                    <div class="text-end small text-white-50" style="font-size:0.7rem;">${timeLabel}</div>
+                                    <div class="text-end small text-white-50" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
                                 </div>`;
                     $('#chat-messages .text-muted').remove();
                     $('#chat-messages').append(html);
@@ -210,10 +218,14 @@
                     // 1. If this is the active chat, append message
                     if (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
                         let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
-                        let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
-                        let html = `<div class="p-2 mb-2 rounded shadow-sm ${align}" style="max-width: 70%;">
+                        let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
+                        let ticks = '';
+                        if (msg.direction === 'out') {
+                            ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
+                        }
+                        let html = `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item" data-id="${msg.id}" style="max-width: 70%;">
                                         <div style="white-space: pre-wrap;">${msg.message}</div>
-                                        <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}</div>
+                                        <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
                                     </div>`;
                         
                         $('#chat-messages .text-center, #chat-messages .text-muted').remove();
@@ -240,6 +252,23 @@
                         if (activeTabAccountId !== 'all' && activeTabAccountId != accountId) {
                             $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).hide();
                         }
+                    }
+                }
+
+                if (data.type == 'message-read') {
+                    // Update ticks for messages in the payload
+                    let messageIds = data.payload.message_ids;
+                    let accountId = data.payload.account_id;
+
+                    if (activeAccount == accountId) {
+                        messageIds.forEach(function(id) {
+                            let $msg = $(`.msg-item[data-id="${id}"]`);
+                            if ($msg.length) {
+                                $msg.find('.tick-icon')
+                                    .removeClass('fa-check text-white-50')
+                                    .addClass('fa-check-double text-success');
+                            }
+                        });
                     }
                 }
             });
