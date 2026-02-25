@@ -194,9 +194,22 @@ class MtprotoEventHandler extends EventHandler
 
             $maxId = $update['max_id'];
             
-            // Find messages for this account and peer that are NOT yet read 
-            // and have a telegram_message_id <= the read max_id.
+            // Resolve the peer ID to our CRM's identifier (username, phone, or numeric)
+            $identifier = (string)$peerId;
+            try {
+                $info = $this->getInfo($peerId);
+                if (isset($info['User']['username']) && !empty($info['User']['username'])) {
+                    $identifier = '@' . $info['User']['username'];
+                } elseif (isset($info['User']['phone']) && !empty($info['User']['phone'])) {
+                    $identifier = $info['User']['phone'];
+                }
+            } catch (\Throwable $e) {
+                // Fallback to numeric ID
+            }
+
+            // Find outgoing messages for this account and THIS specific peer
             $messagesToUpdate = MtprotoMessage::where('account_id', self::$account_id)
+                ->where('contact_identifier', $identifier)
                 ->where('direction', 'out')
                 ->where('is_read', false)
                 ->whereNotNull('telegram_message_id')
@@ -208,14 +221,15 @@ class MtprotoEventHandler extends EventHandler
                 
                 MtprotoMessage::whereIn('id', $ids)->update(['is_read' => true]);
 
-                Log::info("MTProto Read Receipt: Updated " . count($ids) . " messages as read for Account " . self::$account_id);
+                Log::info("MTProto Read Receipt: Updated " . count($ids) . " messages as read for {$identifier} (Account " . self::$account_id . ")");
 
                 // Broadcast to update UI ticks in real-time
                 broadcast(new MtprotoRealtimeEvent(self::$user_id, 'message-read', [
                     'message_ids' => $ids,
                     'account_id'  => self::$account_id,
                     'peer_id'     => $peerId,
-                    'max_id'      => $maxId
+                    'max_id'      => $maxId,
+                    'identifier'  => $identifier
                 ]));
             }
         } catch (\Throwable $e) {

@@ -37,7 +37,23 @@ class MTProtoSendCommand extends Command
         try {
             $result = $mtproto->setAccount($account)->sendMessage($identifier, $msgRecord->message);
             
-            $telegram_id = $result['id'] ?? null;
+            // MadelineProto sendMessage returns an 'updates' object.
+            // We need to find the ID of the newly created message.
+            $telegram_id = null;
+            if (isset($result['id'])) {
+                $telegram_id = $result['id'];
+            } elseif (isset($result['updates'])) {
+                foreach ($result['updates'] as $update) {
+                    if (isset($update['message']['id'])) {
+                        $telegram_id = $update['message']['id'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$telegram_id) {
+                Log::warning("mtproto:send - Could not extract Telegram ID from result", ['result' => $result]);
+            }
             
             MtprotoMessage::where('id', $messageId)->update([
                 'status' => 'success',
