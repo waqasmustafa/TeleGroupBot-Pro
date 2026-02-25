@@ -165,7 +165,8 @@ class MtprotoEventHandler extends EventHandler
             foreach ($targets as $targetId) {
                 $item = $notifData;
                 $item['user_id'] = $targetId;
-                DB::table('notifications')->insert($item);
+                $notifId = DB::table('notifications')->insertGetId($item);
+                $item['id'] = $notifId; // Add ID for real-time reactivity
 
                 // BROADCAST NOTIFICATION TO EACH TARGET:
                 broadcast(new MtprotoRealtimeEvent($targetId, 'notification', $item));

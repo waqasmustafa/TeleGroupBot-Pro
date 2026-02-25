@@ -279,12 +279,6 @@
         <script src="{{ asset('assets/vendors/summernote/summernote-bs4.js') }}"></script>
 
         @include('shared.variables')
-        @stack('scripts-footer')
-        @stack('styles-footer')
-
-        <script src="{{ asset('assets/js/common/common.js') }}"></script>
-        <script src="{{ asset('assets/js/common/include.js') }}"></script>
-
         {{-- Pusher Real-time Integration --}}
         <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
         <script>
@@ -349,6 +343,13 @@
                 }
             });
         </script>
+
+        @include('shared.variables')
+        @stack('scripts-footer')
+        @stack('styles-footer')
+
+        <script src="{{ asset('assets/js/common/common.js') }}"></script>
+        <script src="{{ asset('assets/js/common/include.js') }}"></script>
 
     </body>
 
