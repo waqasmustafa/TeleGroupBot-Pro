@@ -51,15 +51,12 @@ class MTProtoService implements MTProtoServiceInterface
 
         // Apply Proxy if available
         if ($proxy && !empty($proxy['host'])) {
-            $proxySettings = new \danog\MadelineProto\Settings\Proxy();
-            $proxySettings->setType(\danog\MadelineProto\Settings\Proxy::SOCKS5); // Defaulting to SOCKS5 as it's most common for TG
-            $proxySettings->setAddress($proxy['host']);
-            $proxySettings->setPort((int)$proxy['port']);
-            if (!empty($proxy['user'])) {
-                $proxySettings->setUsername($proxy['user']);
-                $proxySettings->setPassword($proxy['pass'] ?? '');
-            }
-            $connectionSettings->setProxies([$proxySettings]);
+            $connectionSettings->addProxy(\danog\MadelineProto\Stream\Proxy\SocksProxy::class, [
+                'address'  => $proxy['host'],
+                'port'     => (int)$proxy['port'],
+                'username' => $proxy['user'] ?? null,
+                'password' => $proxy['pass'] ?? null,
+            ]);
         }
 
         $settings->setConnection($connectionSettings);
