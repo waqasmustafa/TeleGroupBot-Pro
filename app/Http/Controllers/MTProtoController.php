@@ -274,32 +274,39 @@ class MTProtoController extends Home
     }
 
     // Campaigns
-    public function campaignsIndex()
-    {
-        $query = \App\Models\MtprotoCampaign::with(['list', 'template']);
-        if(!$this->is_admin) $query->where('user_id', $this->user_id);
-        
-        $campaigns = $query->latest()->get();
-        $lists = \App\Models\MtprotoContactList::when(!$this->is_admin, function($q) {
-            return $q->where('user_id', $this->user_id);
-        })->get();
-        $templates = \App\Models\MtprotoTemplate::when(!$this->is_admin, function($q) {
-            return $q->where('user_id', $this->user_id);
-        })->get();
+public function campaignsIndex()
+{
+    $is_admin = Auth::user()->user_type == 'Admin';
+    $user_id = Auth::id();
 
-        $active_accounts = \App\Models\MtprotoAccount::where('status', '1')->when(!$this->is_admin, function($q) {
-            return $q->where('user_id', $this->user_id);
-        })->get();
+    $query = \App\Models\MtprotoCampaign::with(['list', 'template']);
+    if(!$is_admin) $query->where('user_id', $user_id);
+    $campaigns = $query->latest()->get();
 
-        $data = [
-            'body' => 'mtproto.campaigns.index',
-            'campaigns' => $campaigns,
-            'lists' => $lists,
-            'templates' => $templates,
-            'active_accounts' => $active_accounts
-        ];
-        return $this->viewcontroller($data);
-    }
+    // Lists
+    $list_query = \App\Models\MtprotoContactList::query();
+    if(!$is_admin) $list_query->where('user_id', $user_id);
+    $lists = $list_query->get();
+
+    // Templates
+    $template_query = \App\Models\MtprotoTemplate::query();
+    if(!$is_admin) $template_query->where('user_id', $user_id);
+    $templates = $template_query->get();
+
+    // Accounts
+    $account_query = \App\Models\MtprotoAccount::where('status', '1');
+    if(!$is_admin) $account_query->where('user_id', $user_id);
+    $active_accounts = $account_query->get();
+
+    $data = [
+        'body' => 'mtproto.campaigns.index',
+        'campaigns' => $campaigns,
+        'lists' => $lists,
+        'templates' => $templates,
+        'active_accounts' => $active_accounts
+    ];
+    return $this->viewcontroller($data);
+}
 
     public function campaignLogs($id)
     {
@@ -329,7 +336,7 @@ class MTProtoController extends Home
         $list = \App\Models\MtprotoContactList::findOrFail($request->list_id);
 
         $campaign = \App\Models\MtprotoCampaign::create([
-            'user_id'          => $this->user_id,
+            'user_id'          => Auth::id(),
             'account_ids'      => $request->account_ids,
             'template_ids'     => $request->template_ids,
             'account_id'       => $request->account_ids[0] ?? null, // Fallback for single-account logic
