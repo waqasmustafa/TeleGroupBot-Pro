@@ -23,3 +23,7 @@ if ($first_acc) print_r($first_acc->toArray());
 echo "\n--- RAW TEMPLATE DATA (First) ---\n";
 $first_temp = MtprotoTemplate::first();
 if ($first_temp) print_r($first_temp->toArray());
+
+echo "\n--- RAW LIST DATA (First) ---\n";
+$first_list = \App\Models\MtprotoContactList::first();
+if ($first_list) print_r($first_list->toArray());
