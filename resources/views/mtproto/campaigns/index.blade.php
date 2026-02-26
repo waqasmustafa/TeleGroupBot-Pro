@@ -81,7 +81,6 @@
                 </div>
             </div>
         </div>
-        </div>
         <div class="col-md-{{$is_admin ? '12' : '8'}}">
             <div class="card">
                 <div class="card-body">
