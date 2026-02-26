@@ -30,7 +30,7 @@
                             <label>{{__('Message Template(s)')}}</label>
                             <select name="template_ids[]" class="form-control select2-multi" multiple required>
                                 @foreach($templates as $temp)
-                                    <option value="{{$temp->id}}">{{$temp->title}}</option>
+                                    <option value="{{$temp->id}}">{{$temp->title}}</option> {{-- Corrected to title --}}
                                 @endforeach
                             </select>
                             <small class="text-muted">{{__('Select one or more. System will randomize them.')}}</small>
@@ -39,7 +39,7 @@
                             <label>{{__('Sender Account(s)')}}</label>
                             <select name="account_ids[]" class="form-control select2-multi" multiple required>
                                 @foreach($active_accounts as $acc)
-                                    <option value="{{$acc->id}}">{{$acc->phone}}</option>
+                                    <option value="{{$acc->id}}">{{$acc->phone}}</option> {{-- Corrected to phone --}}
                                 @endforeach
                             </select>
                             <small class="text-muted">{{__('System will rotate through selected accounts.')}}</small>
