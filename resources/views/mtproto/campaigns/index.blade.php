@@ -6,6 +6,14 @@
         <h3>{{__('Bulk DM Campaigns')}}</h3>
     </div>
 
+    <div class="alert alert-info">
+        DEBUG: Accounts: {{ $active_accounts->count() }} | 
+        Templates: {{ $templates->count() }} | 
+        Lists: {{ $lists->count() }} |
+        UID: {{ Auth::id() }} |
+        Type: {{ Auth::user()->user_type }}
+    </div>
+
     <div class="row">
         <div class="col-md-4">
             <div class="card">
@@ -103,12 +111,14 @@
 @push('scripts-footer')
 <script>
     $(document).ready(function() {
-        // Initialize multi-select
+        // Initialize multi-select - DISABLED FOR DEBUG
+        /*
         $('.select2-multi').select2({
             placeholder: "{{__('Select one or more')}}",
             allowClear: true,
             width: '100%'
         });
+        */
 
         if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
             global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
