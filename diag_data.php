@@ -30,12 +30,13 @@ foreach (User::all() as $u) {
 
 echo "\n--- RAW ACCOUNT DATA (First) ---\n";
 $first_acc = MtprotoAccount::first();
-if ($first_acc) print_r($first_acc->toArray());
+if ($first_acc) {
+    print_r($first_acc->toArray());
+    echo "Session File Exists: " . (file_exists($first_acc->session_path) ? "YES" : "NO") . "\n";
+}
 
-echo "\n--- RAW TEMPLATE DATA (First) ---\n";
-$first_temp = MtprotoTemplate::first();
-if ($first_temp) print_r($first_temp->toArray());
-
-echo "\n--- RAW LIST DATA (First) ---\n";
-$first_list = \App\Models\MtprotoContactList::first();
-if ($first_list) print_r($first_list->toArray());
+echo "\n--- LAST 10 ERRORS ---\n";
+$errors = \App\Models\MtprotoMessage::where('status', 'failed')->latest()->limit(10)->get();
+foreach($errors as $err) {
+    echo "MsgID: {$err->id} | AccID: {$err->account_id} | Error: {$err->error}\n";
+}
