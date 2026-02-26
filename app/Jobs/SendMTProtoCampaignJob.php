@@ -19,6 +19,7 @@ class SendMTProtoCampaignJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $campaign_id;
+    public $timeout = 3600; // Increase timeout to 1 hour to handle long sleep intervals
 
     /**
      * Create a new job instance.
@@ -60,12 +61,6 @@ class SendMTProtoCampaignJob implements ShouldQueue
                 ->get();
         }
 
-        // Fallback for single account
-        if ($accounts->isEmpty() && $campaign->account_id) {
-            $acc = MtprotoAccount::where('id', $campaign->account_id)->where('status', '1')->first();
-            if ($acc) $accounts = collect([$acc]);
-        }
-
         if ($accounts->isEmpty()) {
             $campaign->update(['status' => 'failed']);
             Log::error("No active MTProto Accounts found for campaign " . $campaign->id);
@@ -77,12 +72,6 @@ class SendMTProtoCampaignJob implements ShouldQueue
             $templates = \App\Models\MtprotoTemplate::whereIn('id', $campaign->template_ids)->get();
         }
 
-        // Fallback for single template
-        if ($templates->isEmpty() && $campaign->template_id) {
-            $temp = \App\Models\MtprotoTemplate::find($campaign->template_id);
-            if ($temp) $templates = collect([$temp]);
-        }
-
         if ($templates->isEmpty()) {
             $campaign->update(['status' => 'failed']);
             Log::error("No templates found for campaign " . $campaign->id);
@@ -90,11 +79,15 @@ class SendMTProtoCampaignJob implements ShouldQueue
         }
 
         $contacts = $campaign->list->contacts;
+        $total_contacts = $contacts->count();
         $total_accounts = $accounts->count();
         $errored_account_ids = []; // Tracks accounts that hit limits during this run
-        $service_instances = []; // Cache for MTProtoService instances to avoid session reload overhead
+        $service_instances = []; // Cache for MTProtoService instances
 
-        foreach ($contacts as $index => $contact) {
+        $index = 0;
+        while ($index < $total_contacts) {
+            $contact = $contacts[$index];
+            
             // Check if campaign was paused externally
             if ($campaign->fresh()->status === 'paused') break;
 
@@ -116,7 +109,7 @@ class SendMTProtoCampaignJob implements ShouldQueue
                 break;
             }
 
-            // Get or create service instance for this account
+            // Get or create service instance
             if (!isset($service_instances[$account->id])) {
                 $service_instances[$account->id] = clone $mtproto_service;
                 $service_instances[$account->id]->setAccount($account);
@@ -124,7 +117,10 @@ class SendMTProtoCampaignJob implements ShouldQueue
             $active_service = $service_instances[$account->id];
 
             $identifier = $contact->username ?: $contact->phone;
-            if (!$identifier) continue;
+            if (!$identifier) {
+                $index++;
+                continue;
+            }
 
             try {
                 // Select a random template
@@ -145,6 +141,7 @@ class SendMTProtoCampaignJob implements ShouldQueue
                     'message'            => $message,
                     'status'             => 'success',
                     'sent_via'           => $account->phone,
+                    'error'              => "Template ID: " . $template->id, // Store template ID here for debugging
                     'message_time'       => now()
                 ]);
 
@@ -159,12 +156,14 @@ class SendMTProtoCampaignJob implements ShouldQueue
                 ]);
 
                 // Randomized Throttling (Anti-Ban)
-                if ($index < count($contacts) - 1) {
+                if ($index < $total_contacts - 1) {
                     $base_delay = $campaign->interval_min * 60;
                     $random_offset = rand(-10, 30);
                     $total_delay = max(10, $base_delay + $random_offset);
                     sleep($total_delay);
                 }
+
+                $index++; // Move to next contact ONLY after success
 
             } catch (\Exception $e) {
                 $error_msg = $e->getMessage();
@@ -185,20 +184,24 @@ class SendMTProtoCampaignJob implements ShouldQueue
                     'message_time'       => now()
                 ]);
 
-                // If Critical error, disable account and retry contact
+                // If Critical error (Auth or Flood), disable account and DON'T increment index to retry
                 if (strpos($error_msg, 'FLOOD') !== false || strpos($error_msg, 'AUTH_KEY_UNREGISTERED') !== false || strpos($error_msg, 'ACCOUNT_KEY_INVALID') !== false) {
                     $errored_account_ids[] = $account->id;
                     if (strpos($error_msg, 'AUTH_KEY') !== false) {
-                        $account->update(['status' => '0']); // Disable account in DB
+                        $account->update(['status' => '0']);
                     }
-                    // Rewind to retry this contact with a different account
-                    $index--; 
+                    // Wait a bit before retry with next account
+                    sleep(5);
+                } else {
+                    // Normal failure (e.g. invalid username), just move on
+                    $index++;
                 }
             }
         }
 
-        // Final status update - check fresh status in case it was paused inside the loop
-        if ($campaign->fresh()->status !== 'paused') {
+        // Final status update
+        $campaign = $campaign->fresh();
+        if ($campaign->status !== 'paused') {
             $campaign->update(['status' => 'completed']);
             
             // BROADCAST COMPLETION:
