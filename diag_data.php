@@ -35,6 +35,15 @@ if ($first_acc) {
     echo "Session File Exists: " . (file_exists($first_acc->session_path) ? "YES" : "NO") . "\n";
 }
 
+echo "\n--- LAST CAMPAIGN DATA ---\n";
+$camp = \App\Models\MtprotoCampaign::latest()->first();
+if ($camp) {
+    echo "ID: {$camp->id} | Name: {$camp->campaign_name}\n";
+    echo "Account IDs: " . json_encode($camp->account_ids) . "\n";
+    echo "Template IDs: " . json_encode($camp->template_ids) . "\n";
+    echo "Status: {$camp->status} | Sent: {$camp->sent_count}\n";
+}
+
 echo "\n--- LAST 10 ERRORS ---\n";
 $errors = \App\Models\MtprotoMessage::where('status', 'failed')->latest()->limit(10)->get();
 foreach($errors as $err) {
