@@ -320,22 +320,24 @@ class MTProtoController extends Home
     {
         $request->validate([
             'campaign_name' => 'required',
-            'list_id' => 'required',
-            'template_id' => 'required',
-            'account_id' => 'required',
-            'interval_min' => 'required|integer|min:1'
+            'list_id'       => 'required',
+            'template_ids'  => 'required|array',
+            'account_ids'   => 'required|array',
+            'interval_min'  => 'required|integer|min:1'
         ]);
 
         $list = \App\Models\MtprotoContactList::findOrFail($request->list_id);
 
         $campaign = \App\Models\MtprotoCampaign::create([
-            'user_id' => $this->user_id,
-            'account_id' => $request->account_id,
-            'list_id' => $request->list_id,
-            'template_id' => $request->template_id,
-            'campaign_name' => $request->campaign_name,
-            'interval_min' => $request->interval_min,
-            'status' => 'pending',
+            'user_id'          => $this->user_id,
+            'account_ids'      => $request->account_ids,
+            'template_ids'     => $request->template_ids,
+            'account_id'       => $request->account_ids[0] ?? null, // Fallback for single-account logic
+            'template_id'      => $request->template_ids[0] ?? null, // Fallback for single-template logic
+            'list_id'          => $request->list_id,
+            'campaign_name'    => $request->campaign_name,
+            'interval_min'     => $request->interval_min,
+            'status'           => 'pending',
             'total_recipients' => $list->contacts()->count()
         ]);
 

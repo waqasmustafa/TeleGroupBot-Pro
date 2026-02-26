@@ -28,23 +28,22 @@
                             </select>
                         </div>
                         <div class="form-group mb-3">
-                            <label>{{__('Message Template')}}</label>
-                            <select name="template_id" class="form-control" required>
-                                <option value="">{{__('Select Template')}}</option>
+                            <label>{{__('Message Template(s)')}}</label>
+                            <select name="template_ids[]" class="form-control select2-multi" multiple required>
                                 @foreach($templates as $temp)
                                     <option value="{{$temp->id}}">{{$temp->title}}</option>
                                 @endforeach
                             </select>
+                            <small class="text-muted">{{__('Select one or more. System will randomize them.')}}</small>
                         </div>
                         <div class="form-group mb-3">
-                            <label>{{__('Select Sender Account')}}</label>
-                            <select name="account_id" class="form-control" required>
-                                <option value="">{{__('Select Account')}}</option>
+                            <label>{{__('Sender Account(s)')}}</label>
+                            <select name="account_ids[]" class="form-control select2-multi" multiple required>
                                 @foreach($active_accounts as $acc)
                                     <option value="{{$acc->id}}">{{$acc->phone}}</option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">{{__('This account will be used to send messages.')}}</small>
+                            <small class="text-muted">{{__('System will rotate through selected accounts.')}}</small>
                         </div>
                         <div class="form-group mb-3">
                             <label>{{__('Time Interval (Minutes)')}}</label>
@@ -105,6 +104,13 @@
 @push('scripts-footer')
 <script>
     $(document).ready(function() {
+        // Initialize multi-select
+        $('.select2-multi').select2({
+            placeholder: "{{__('Select one or more')}}",
+            allowClear: true,
+            width: '100%'
+        });
+
         if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
             global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
                 if (data.type == 'campaign') {

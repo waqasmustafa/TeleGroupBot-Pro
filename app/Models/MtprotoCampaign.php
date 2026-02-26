@@ -11,6 +11,11 @@ class MtprotoCampaign extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'account_ids' => 'array',
+        'template_ids' => 'array',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
