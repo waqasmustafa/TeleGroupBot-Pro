@@ -19,29 +19,56 @@
                         </div>
                         <div class="form-group mb-3">
                             <label>{{__('Target List')}}</label>
-                            <select name="list_id" class="form-control select2-single" required>
+                            <select name="list_id" class="form-control" required>
                                 <option value="">{{__('Select List')}}</option>
                                 @foreach($lists as $list)
                                     <option value="{{$list->id}}">{{$list->name}} ({{$list->contacts->count()}})</option>
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="form-group mb-3">
-                            <label>{{__('Message Template(s)')}}</label>
-                            <select name="template_ids[]" class="form-control select2-multi" multiple required>
-                                @foreach($templates as $temp)
-                                    <option value="{{$temp->id}}">{{$temp->title}}</option> {{-- Corrected to title --}}
-                                @endforeach
-                            </select>
-                            <small class="text-muted">{{__('Select one or more. System will randomize them.')}}</small>
+                            <label class="d-flex justify-content-between">
+                                {{__('Message Template(s)')}}
+                                <span class="text-xs text-muted">{{ $templates->count() }} {{__('Available')}}</span>
+                            </label>
+                            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                @if($templates->isEmpty())
+                                    <p class="text-muted mb-0 small">{{__('No templates found.')}}</p>
+                                @else
+                                    @foreach($templates as $temp)
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="template_ids[]" value="{{$temp->id}}" id="temp_{{$temp->id}}">
+                                            <label class="form-check-label small" for="temp_{{$temp->id}}">
+                                                <strong>{{$temp->title}}</strong>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            </div>
+                            <small class="text-muted">{{__('System will randomize selected templates.')}}</small>
                         </div>
+
                         <div class="form-group mb-3">
-                            <label>{{__('Sender Account(s)')}}</label>
-                            <select name="account_ids[]" class="form-control select2-multi" multiple required>
-                                @foreach($active_accounts as $acc)
-                                    <option value="{{$acc->id}}">{{$acc->phone}}</option> {{-- Corrected to phone --}}
-                                @endforeach
-                            </select>
+                            <label class="d-flex justify-content-between">
+                                {{__('Sender Account(s)')}}
+                                <a href="#" id="select-all-accounts" class="text-xs">{{__('Select All')}}</a>
+                            </label>
+                            <input type="text" class="form-control form-control-sm mb-2" id="search-accounts" placeholder="{{__('Search phone...')}}">
+                            <div class="border rounded p-3 bg-light" id="account-list-container" style="max-height: 200px; overflow-y: auto;">
+                                @if($active_accounts->isEmpty())
+                                    <p class="text-muted mb-0 small">{{__('No active accounts found.')}}</p>
+                                @else
+                                    @foreach($active_accounts as $acc)
+                                        <div class="form-check mb-2 account-item">
+                                            <input class="form-check-input" type="checkbox" name="account_ids[]" value="{{$acc->id}}" id="acc_{{$acc->id}}">
+                                            <label class="form-check-label small" for="acc_{{$acc->id}}">
+                                                {{$acc->phone}}
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            </div>
                             <small class="text-muted">{{__('System will rotate through selected accounts.')}}</small>
                         </div>
                         <div class="form-group mb-3">
@@ -103,18 +130,23 @@
 @push('scripts-footer')
 <script>
     $(document).ready(function() {
-        // Initialize multi-select
-        $('.select2-multi').select2({
-            placeholder: "{{__('Select one or more')}}",
-            allowClear: true,
-            width: '100%'
+        // Search Accounts Filter
+        $('#search-accounts').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $(".account-item").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
         });
 
-        // Initialize single select2
-        $('.select2-single').select2({
-            placeholder: "{{__('Select an option')}}",
-            allowClear: true,
-            width: '100%'
+        // Select All Accounts
+        $('#select-all-accounts').on('click', function(e) {
+            e.preventDefault();
+            let allChecked = true;
+            $('input[name="account_ids[]"]:visible').each(function() {
+                if (!$(this).prop('checked')) allChecked = false;
+            });
+            $('input[name="account_ids[]"]:visible').prop('checked', !allChecked);
+            $(this).text(allChecked ? "{{__('Select All')}}" : "{{__('Unselect All')}}");
         });
 
         if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
