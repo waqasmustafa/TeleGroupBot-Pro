@@ -92,8 +92,12 @@ class SendMTProtoCampaignJob implements ShouldQueue
         $contacts = $campaign->list->contacts;
         $total_accounts = $accounts->count();
         $errored_account_ids = []; // Tracks accounts that hit limits during this run
+        $service_instances = []; // Cache for MTProtoService instances to avoid session reload overhead
 
         foreach ($contacts as $index => $contact) {
+            // Check if campaign was paused externally
+            if ($campaign->fresh()->status === 'paused') break;
+
             // Find next available account using Round-Robin
             $account = null;
             for ($attempt = 0; $attempt < $total_accounts; $attempt++) {
@@ -107,10 +111,20 @@ class SendMTProtoCampaignJob implements ShouldQueue
             }
 
             if (!$account) {
-                Log::error("All selected accounts for campaign {$campaign->id} have hit limits. Pausing.");
+                Log::error("All selected accounts for campaign {$campaign->id} have hit limits or auth errors. Pausing.");
                 $campaign->update(['status' => 'paused']);
                 break;
             }
+
+            // Get or create service instance for this account
+            if (!isset($service_instances[$account->id])) {
+                $service_instances[$account->id] = clone $mtproto_service;
+                $service_instances[$account->id]->setAccount($account);
+            }
+            $active_service = $service_instances[$account->id];
+
+            $identifier = $contact->username ?: $contact->phone;
+            if (!$identifier) continue;
 
             try {
                 // Select a random template
@@ -118,14 +132,10 @@ class SendMTProtoCampaignJob implements ShouldQueue
 
                 // Personalize message
                 $message = str_replace('{first_name}', $contact->first_name ?? 'there', $template->message);
-                $identifier = $contact->username ?: $contact->phone;
 
-                if (!$identifier) continue;
+                $active_service->sendMessage($identifier, $message);
 
-                $mtproto_service->setAccount($account);
-                $mtproto_service->sendMessage($identifier, $message);
-
-                // Log outbox message
+                // Log success
                 MtprotoMessage::create([
                     'user_id'            => $campaign->user_id,
                     'account_id'         => $account->id,
@@ -134,7 +144,7 @@ class SendMTProtoCampaignJob implements ShouldQueue
                     'direction'          => 'out',
                     'message'            => $message,
                     'status'             => 'success',
-                    'sent_via'           => $account->phone . ' (' . ($account->proxy_host ?? 'Local') . ')',
+                    'sent_via'           => $account->phone,
                     'message_time'       => now()
                 ]);
 
@@ -148,7 +158,7 @@ class SendMTProtoCampaignJob implements ShouldQueue
                     'failed_count' => $campaign->failed_count
                 ]);
 
-                // Randomized Throttling (Anti-Ban) - Only sleep if not the last contact
+                // Randomized Throttling (Anti-Ban)
                 if ($index < count($contacts) - 1) {
                     $base_delay = $campaign->interval_min * 60;
                     $random_offset = rand(-10, 30);
@@ -157,33 +167,33 @@ class SendMTProtoCampaignJob implements ShouldQueue
                 }
 
             } catch (\Exception $e) {
+                $error_msg = $e->getMessage();
                 $campaign->increment('failed_count');
-                Log::error("Failed to send MTProto DM from Account {$account->id} to {$identifier}: " . $e->getMessage());
+                Log::error("MTProto Campaign Error (Acc: {$account->id}, To: {$identifier}): " . $error_msg);
 
-                // If Peer Flood or Auth error, don't use this account for subsequent messages in this run
-                if (strpos($e->getMessage(), 'FLOOD') !== false || strpos($e->getMessage(), 'AUTH_KEY_UNREGISTERED') !== false) {
-                    $errored_account_ids[] = $account->id;
-                    if (strpos($e->getMessage(), 'AUTH_KEY_UNREGISTERED') !== false) {
-                        $account->update(['status' => '0']);
-                    }
-                    // Rewind loop index to retry this contact with next account
-                    $index--;
-                    continue;
-                }
-
-                // Normal failure (e.g. invalid username) - log and move to next contact
+                // Log the failure to DB
                 MtprotoMessage::create([
                     'user_id'            => $campaign->user_id,
                     'account_id'         => $account->id,
                     'campaign_id'        => $campaign->id,
                     'contact_identifier' => $identifier,
                     'direction'          => 'out',
-                    'message'            => $message ?? $template->message,
+                    'message'            => $message ?? 'N/A',
                     'status'             => 'failed',
-                    'error'              => substr($e->getMessage(), 0, 255),
+                    'error'              => substr($error_msg, 0, 255),
                     'sent_via'           => $account->phone,
                     'message_time'       => now()
                 ]);
+
+                // If Critical error, disable account and retry contact
+                if (strpos($error_msg, 'FLOOD') !== false || strpos($error_msg, 'AUTH_KEY_UNREGISTERED') !== false || strpos($error_msg, 'ACCOUNT_KEY_INVALID') !== false) {
+                    $errored_account_ids[] = $account->id;
+                    if (strpos($error_msg, 'AUTH_KEY') !== false) {
+                        $account->update(['status' => '0']); // Disable account in DB
+                    }
+                    // Rewind to retry this contact with a different account
+                    $index--; 
+                }
             }
         }
 
