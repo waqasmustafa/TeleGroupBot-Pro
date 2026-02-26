@@ -16,7 +16,12 @@ foreach (User::all() as $u) {
     echo "  Lists: " . MtprotoContactList::where('user_id', $u->id)->count() . "\n";
 }
 
-echo "\n--- ORPHAN DATA (Wrong or Missing UID) ---\n";
-$all_uids = User::pluck('id')->toArray();
-echo "Accounts not in users: " . MtprotoAccount::whereNotIn('user_id', $all_uids)->count() . "\n";
-echo "Templates not in users: " . MtprotoTemplate::whereNotIn('user_id', $all_uids)->count() . "\n";
+echo "\n--- ACCOUNTS DETAIL ---\n";
+foreach (MtprotoAccount::all() as $a) {
+    echo "ID: {$a->id} | Phone: {$a->phone} | Status: '{$a->status}' | UserID: {$a->user_id}\n";
+}
+
+echo "\n--- TEMPLATES DETAIL ---\n";
+foreach (MtprotoTemplate::all() as $t) {
+    echo "ID: {$t->id} | Name: {$t->template_name} | UserID: {$t->user_id}\n";
+}
