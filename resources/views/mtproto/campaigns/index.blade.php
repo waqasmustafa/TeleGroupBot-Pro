@@ -6,14 +6,6 @@
         <h3>{{__('Bulk DM Campaigns')}}</h3>
     </div>
 
-    <div class="alert alert-info">
-        DEBUG: Accounts: {{ $active_accounts->count() }} | 
-        Templates: {{ $templates->count() }} | 
-        Lists: {{ $lists->count() }} |
-        UID: {{ Auth::id() }} |
-        Type: {{ Auth::user()->user_type }}
-    </div>
-
     <div class="row">
         <div class="col-md-4">
             <div class="card">
@@ -27,7 +19,7 @@
                         </div>
                         <div class="form-group mb-3">
                             <label>{{__('Target List')}}</label>
-                            <select name="list_id" class="form-control" required>
+                            <select name="list_id" class="form-control select2-single" required>
                                 <option value="">{{__('Select List')}}</option>
                                 @foreach($lists as $list)
                                     <option value="{{$list->id}}">{{$list->name}} ({{$list->contacts->count()}})</option>
@@ -111,14 +103,19 @@
 @push('scripts-footer')
 <script>
     $(document).ready(function() {
-        // Initialize multi-select - DISABLED FOR DEBUG
-        /*
+        // Initialize multi-select
         $('.select2-multi').select2({
             placeholder: "{{__('Select one or more')}}",
             allowClear: true,
             width: '100%'
         });
-        */
+
+        // Initialize single select2
+        $('.select2-single').select2({
+            placeholder: "{{__('Select an option')}}",
+            allowClear: true,
+            width: '100%'
+        });
 
         if (typeof global_mtproto_channel !== 'undefined' && global_mtproto_channel !== null) {
             global_mtproto_channel.bind('mtproto-realtime-event', function(data) {
