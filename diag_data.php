@@ -11,9 +11,21 @@ use App\Models\MtprotoContactList;
 echo "--- USERS ---\n";
 foreach (User::all() as $u) {
     echo "ID: {$u->id} | Email: {$u->email} | Type: {$u->user_type}\n";
-    echo "  Accounts: " . MtprotoAccount::where('user_id', $u->id)->count() . "\n";
-    echo "  Templates: " . MtprotoTemplate::where('user_id', $u->id)->count() . "\n";
-    echo "  Lists: " . MtprotoContactList::where('user_id', $u->id)->count() . "\n";
+    $is_admin = ($u->user_type == 'Admin');
+    
+    // Simulating Controller Queries
+    $acc_q = MtprotoAccount::where('status', '1');
+    if(!$is_admin) $acc_q->where('user_id', $u->id);
+    
+    $temp_q = MtprotoTemplate::query();
+    if(!$is_admin) $temp_q->where('user_id', $u->id);
+    
+    $list_q = \App\Models\MtprotoContactList::query();
+    if(!$is_admin) $list_q->where('user_id', $u->id);
+
+    echo "  Accounts (Status=1): " . $acc_q->count() . "\n";
+    echo "  Templates: " . $temp_q->count() . "\n";
+    echo "  Lists: " . $list_q->count() . "\n";
 }
 
 echo "\n--- RAW ACCOUNT DATA (First) ---\n";
