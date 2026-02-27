@@ -307,32 +307,6 @@
                             scrollToBottom();
                         }
 
-                        // ... update conversation list row ...
-                    }
-
-                    if (data.type == 'message-deleted') {
-                        let msgId = data.payload.message_id;
-                        $(`.msg-item[data-id="${msgId}"]`).fadeOut(300, function() { $(this).remove(); });
-                    }
-
-                    if (data.type == 'message-read') {
-                        // ... existing ticks update ...
-                    }
-                });
-            } else {
-                // ... retry ...
-            }
-        }
-
-        bindMtprotoEvents();
-    });
-</script>
-<style>
-    .msg-item:hover .msg-options { opacity: 1 !important; }
-    .msg-options button:focus { box-shadow: none; }
-</style>
-@endpush
-
                         // 2. Update the conversation list on the left
                         let $contactRow = $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`);
                         if ($contactRow.length) {
@@ -350,9 +324,14 @@
                             // Apply current filter
                             let activeTabAccountId = $('#accountTabs a.active').data('account-id');
                             if (activeTabAccountId !== 'all' && activeTabAccountId != accountId) {
-                                $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).hide();
+                                $(`#conversation-list .contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).hide();
                             }
                         }
+                    }
+
+                    if (data.type == 'message-deleted') {
+                        let msgId = data.payload.message_id;
+                        $(`.msg-item[data-id="${msgId}"]`).fadeOut(300, function() { $(this).remove(); });
                     }
 
                     if (data.type == 'message-read') {
@@ -360,9 +339,6 @@
                         let accountId = data.payload.account_id;
                         let identifier = data.payload.identifier;
 
-                        console.log("Processing message-read for identity:", identifier, "messages:", messageIds);
-
-                        // Update ticks if the account matches
                         if (activeAccount == accountId) {
                             messageIds.forEach(function(id) {
                                 let $msg = $(`.msg-item[data-id="${id}"]`);
@@ -376,15 +352,16 @@
                     }
                 });
             } else {
-                // Try again in 500ms if not ready
                 console.warn("MTProto Real-time: Channel not ready, retrying in 500ms...");
                 setTimeout(bindMtprotoEvents, 500);
             }
         }
 
-        // Start waiting for the channel
         bindMtprotoEvents();
     });
 </script>
+<style>
+    .msg-item:hover .msg-options { opacity: 1 !important; }
+    .msg-options button:focus { box-shadow: none; }
+</style>
 @endpush
-
