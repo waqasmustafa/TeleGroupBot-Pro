@@ -26,8 +26,9 @@
                 <div class="list-group list-group-flush" id="conversation-list">
                     @foreach($conversations as $chat)
                         <a href="#" class="list-group-item list-group-item-action contact-item" data-id="{{$chat->contact_identifier}}" data-account-id="{{$chat->account_id}}">
-                            <div class="d-flex w-100 justify-content-between">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
                                 <h6 class="mb-1">{{$chat->contact_identifier}}</h6>
+                                <span class="badge bg-success rounded-pill unread-badge {{ $chat->unread_count > 0 ? '' : 'd-none' }}" style="font-size: 0.7rem;">{{$chat->unread_count}}</span>
                                 <small class="text-muted">{{$chat->last_msg}}</small>
                             </div>
                         </a>
@@ -107,6 +108,16 @@
         
         $('#chat-messages').html('<div class="text-center my-auto"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><br>Loading messages...</div>');
 
+        // Mark as Read
+        $.post("{{route('inbox.read')}}", {
+            _token: "{{csrf_token()}}",
+            identifier: identifier,
+            account_id: activeAccount
+        });
+
+        // Clear badge locally
+        $(`.contact-item[data-id="${identifier}"][data-account-id="${activeAccount}"] .unread-badge`).addClass('d-none').text('0');
+
         $.ajax({
             url: baseUrl + "/mtproto/inbox/messages/" + encodeURIComponent(identifier),
             method: 'GET',
@@ -164,12 +175,12 @@
                 : ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
         }
         
-        // Refined Delete Button: 3 Vertical Dots, Bold, White, Larger
+        // Refined Delete Button: 3 Horizontal Dots, Bold, White, Larger
         let deleteBtn = '';
         if (msg.direction === 'out') {
             deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 5px; right: 5px; opacity: 0; transition: all 0.2s ease;">
                             <button class="btn btn-link btn-sm text-white p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none; line-height: 1;">
-                                <i class="fas fa-ellipsis-v" style="font-size: 1.2rem; filter: drop-shadow(0px 0px 1px rgba(0,0,0,0.5));"></i>
+                                <i class="fas fa-ellipsis-h" style="font-size: 1.2rem; filter: drop-shadow(0px 0px 1px rgba(0,0,0,0.5));"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="font-size: 0.85rem; border-radius: 10px;">
                                 <li><a class="dropdown-item text-danger fw-bold py-2" href="javascript:void(0)" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Haye ye Delete Everyone' : 'Delete for Everyone'}</a></li>
@@ -267,11 +278,23 @@
                         let $contactRow = $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`);
                         if ($contactRow.length) {
                             $contactRow.find('small').text(msg.message_time);
+                            
+                            // Increment unread count if not active
+                            if (!(activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString()))) {
+                                let $badge = $contactRow.find('.unread-badge');
+                                let count = parseInt($badge.text()) || 0;
+                                $badge.text(count + 1).removeClass('d-none');
+                            }
+
                             $('#conversation-list').prepend($contactRow);
                         } else {
+                            let unreadClass = (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString())) ? 'd-none' : '';
+                            let unreadVal = unreadClass === '' ? '1' : '0';
+
                             let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}" data-account-id="${accountId}">
-                                            <div class="d-flex w-100 justify-content-between">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
                                                 <h6 class="mb-1">${identifier}</h6>
+                                                <span class="badge bg-success rounded-pill unread-badge ${unreadClass}" style="font-size: 0.7rem;">${unreadVal}</span>
                                                 <small class="text-muted">${msg.message_time}</small>
                                             </div>
                                           </a>`;

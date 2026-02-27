@@ -370,7 +370,16 @@ public function campaignsIndex()
         $query = \App\Models\MtprotoMessage::query();
         if(!$this->is_admin) $query->where('user_id', $this->user_id);
 
-        $conversations = $query->select('contact_identifier', 'account_id', DB::raw('MAX(message_time) as last_msg'))
+        $conversations = $query->select(
+                'contact_identifier', 
+                'account_id', 
+                DB::raw('MAX(message_time) as last_msg'),
+                DB::raw("(SELECT COUNT(*) FROM mtproto_messages m2 
+                          WHERE m2.contact_identifier = mtproto_messages.contact_identifier 
+                          AND m2.account_id = mtproto_messages.account_id 
+                          AND m2.direction = 'in' 
+                          AND m2.is_read = 0) as unread_count")
+            )
             ->groupBy('contact_identifier', 'account_id')
             ->orderBy('last_msg', 'desc')
             ->get();
@@ -460,6 +469,27 @@ public function campaignsIndex()
 
         // Dispatch background job for remote deletion + local DB cleanup
         \App\Jobs\DeleteMTProtoMessageJob::dispatch($msg->id, $revoke);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function markAsRead(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required',
+            'account_id' => 'required'
+        ]);
+
+        $query = \App\Models\MtprotoMessage::where('contact_identifier', $request->identifier)
+            ->where('account_id', $request->account_id)
+            ->where('direction', 'in')
+            ->where('is_read', 0);
+
+        if (!$this->is_admin) {
+            $query->where('user_id', $this->user_id);
+        }
+
+        $query->update(['is_read' => 1]);
 
         return response()->json(['success' => true]);
     }
