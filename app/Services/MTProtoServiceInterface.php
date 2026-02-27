@@ -10,6 +10,7 @@ interface MTProtoServiceInterface
     public function completeLogin($code);
     public function complete2FA($password);
     public function sendMessage($toId, $message);
+    public function deleteMessages(array $messageIds, $revoke = true);
     public function getMessages($limit = 20);
     public function logout();
     public function stop();

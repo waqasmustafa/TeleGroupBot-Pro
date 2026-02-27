@@ -175,6 +175,15 @@ class MTProtoService implements MTProtoServiceInterface
         ]);
     }
 
+    public function deleteMessages(array $messageIds, $revoke = true)
+    {
+        $this->includeMadeline();
+        return $this->MadelineProto->messages->deleteMessages([
+            'revoke' => $revoke,
+            'id' => $messageIds,
+        ]);
+    }
+
     public function getMessages($limit = 20)
     {
         $this->includeMadeline();

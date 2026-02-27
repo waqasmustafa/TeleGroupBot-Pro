@@ -441,4 +441,26 @@ public function campaignsIndex()
 
         return response()->json(['success' => true, 'message_obj' => $msg]);
     }
+
+    public function deleteMessage(Request $request)
+    {
+        $request->validate([
+            'message_id' => 'required|exists:mtproto_messages,id',
+            'type' => 'required|in:everyone,me'
+        ]);
+
+        $msg = \App\Models\MtprotoMessage::findOrFail($request->message_id);
+        
+        // Security check
+        if (!$this->is_admin && $msg->user_id !== $this->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $revoke = ($request->type === 'everyone');
+
+        // Dispatch background job for remote deletion + local DB cleanup
+        \App\Jobs\DeleteMTProtoMessageJob::dispatch($msg->id, $revoke);
+
+        return response()->json(['success' => true]);
+    }
 }

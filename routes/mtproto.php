@@ -33,4 +33,5 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('mtproto/inbox', [MTProtoController::class, 'inbox'])->name('mtproto.inbox');
     Route::get('mtproto/inbox/messages/{contact_id}', [MTProtoController::class, 'getChatMessages'])->name('mtproto.inbox.messages');
     Route::post('mtproto/inbox/send', [MTProtoController::class, 'sendReply'])->name('mtproto.inbox.send');
+    Route::post('mtproto/inbox/delete', [MTProtoController::class, 'deleteMessage'])->name('mtproto.inbox.delete');
 });

@@ -125,8 +125,19 @@
                                 : ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
                         }
                         
-                        html += `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item" data-id="${msg.id}" style="max-width: 70%;">
-                                    <div style="white-space: pre-wrap;">${msg.message}</div>
+                        let deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 2px; right: 2px; opacity: 0;">
+                                            <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-chevron-down" style="font-size: 0.6rem;"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Haye ye Delete Everyone' : 'Delete for Everyone'}</a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Sirf Mere Liye' : 'Delete for Me'}</a></li>
+                                            </ul>
+                                         </div>`;
+
+                        html += `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%;">
+                                    ${msg.direction === 'out' ? deleteBtn : ''}
+                                    <div style="white-space: pre-wrap; padding-right: 15px;">${msg.message}</div>
                                     <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
                                  </div>`;
                     });
@@ -137,6 +148,31 @@
             error: function(xhr) {
                 console.error("Failed to load messages:", xhr);
                 $('#chat-messages').html('<div class="text-center my-auto text-danger">Failed to load messages. Please try again.</div>');
+            }
+        });
+    }
+
+    function deleteMsg(id, type) {
+        let confirmText = type === 'everyone' ? "Kya aap waqai AIK SATH sab ke liye delete karna chahte hain?" : "Sirf aap ke pas se delete ho ga, samne wale ke pas rahe ga. Continue?";
+        if(!confirm(confirmText)) return;
+
+        $.ajax({
+            url: "{{route('mtproto.inbox.delete')}}",
+            method: 'POST',
+            data: {
+                _token: "{{csrf_token()}}",
+                message_id: id,
+                type: type
+            },
+            success: function(res) {
+                if(res.success) {
+                    $(`.msg-item[data-id="${id}"]`).fadeOut(300, function() { $(this).remove(); });
+                } else {
+                    alert(res.error || "Failed to delete message");
+                }
+            },
+            error: function(xhr) {
+                alert("Error deleting message. Please login again if session expired.");
             }
         });
     }
@@ -170,8 +206,20 @@
                     let msg = res.message_obj;
                     let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
                     let ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
-                    let html = `<div class="p-2 mb-2 rounded shadow-sm align-self-end bg-primary text-white msg-item" data-id="${msg.id}" style="max-width: 70%;">
-                                    <div style="white-space: pre-wrap;">${msg.message}</div>
+                    
+                    let deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 2px; right: 2px; opacity: 0;">
+                                            <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-chevron-down" style="font-size: 0.6rem;"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> Delete for Everyone</a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> Delete for Me</a></li>
+                                            </ul>
+                                         </div>`;
+
+                    let html = `<div class="p-2 mb-2 rounded shadow-sm align-self-end bg-primary text-white msg-item position-relative" data-id="${msg.id}" style="max-width: 70%;">
+                                    ${deleteBtn}
+                                    <div style="white-space: pre-wrap; padding-right: 15px;">${msg.message}</div>
                                     <div class="text-end small text-white-50" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
                                 </div>`;
                     $('#chat-messages .text-muted').remove();
@@ -191,6 +239,13 @@
     });
 
     $(document).ready(function() {
+        // Hover effect for delete button
+        $(document).on('mouseenter', '.msg-item', function() {
+            $(this).find('.msg-options').css('opacity', '1');
+        }).on('mouseleave', '.msg-item', function() {
+            $(this).find('.msg-options').css('opacity', '0');
+        });
+
         // Auto-load first contact
         let $first = $('.contact-item').first();
         if ($first.length) { $first.trigger('click'); }
@@ -227,8 +282,23 @@
                             if (msg.direction === 'out') {
                                 ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
                             }
-                            let html = `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item" data-id="${msg.id}" style="max-width: 70%;">
-                                            <div style="white-space: pre-wrap;">${msg.message}</div>
+
+                            let deleteBtn = '';
+                            if (msg.direction === 'out') {
+                                deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 2px; right: 2px; opacity: 0;">
+                                                <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-chevron-down" style="font-size: 0.6rem;"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> Delete for Everyone</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> Delete for Me</a></li>
+                                                </ul>
+                                            </div>`;
+                            }
+
+                            let html = `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%;">
+                                            ${deleteBtn}
+                                            <div style="white-space: pre-wrap; padding-right: 15px;">${msg.message}</div>
                                             <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
                                         </div>`;
                             
@@ -236,6 +306,32 @@
                             $('#chat-messages').append(html);
                             scrollToBottom();
                         }
+
+                        // ... update conversation list row ...
+                    }
+
+                    if (data.type == 'message-deleted') {
+                        let msgId = data.payload.message_id;
+                        $(`.msg-item[data-id="${msgId}"]`).fadeOut(300, function() { $(this).remove(); });
+                    }
+
+                    if (data.type == 'message-read') {
+                        // ... existing ticks update ...
+                    }
+                });
+            } else {
+                // ... retry ...
+            }
+        }
+
+        bindMtprotoEvents();
+    });
+</script>
+<style>
+    .msg-item:hover .msg-options { opacity: 1 !important; }
+    .msg-options button:focus { box-shadow: none; }
+</style>
+@endpush
 
                         // 2. Update the conversation list on the left
                         let $contactRow = $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`);
