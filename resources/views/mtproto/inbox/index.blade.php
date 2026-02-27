@@ -116,30 +116,7 @@
                     html = '<div class="text-center my-auto text-muted">No messages found.</div>';
                 } else {
                     messages.forEach(function(msg) {
-                        let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
-                        let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
-                        let ticks = '';
-                        if (msg.direction === 'out') {
-                            ticks = msg.is_read 
-                                ? ' <i class="fa fa-check-double text-success ms-1 tick-icon"></i>' 
-                                : ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
-                        }
-                        
-                        let deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 2px; right: 2px; opacity: 0;">
-                                            <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-chevron-down" style="font-size: 0.6rem;"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
-                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Haye ye Delete Everyone' : 'Delete for Everyone'}</a></li>
-                                                <li><a class="dropdown-item" href="#" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Sirf Mere Liye' : 'Delete for Me'}</a></li>
-                                            </ul>
-                                         </div>`;
-
-                        html += `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%;">
-                                    ${msg.direction === 'out' ? deleteBtn : ''}
-                                    <div style="white-space: pre-wrap; padding-right: 15px;">${msg.message}</div>
-                                    <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
-                                 </div>`;
+                        html += getMessageHtml(msg);
                     });
                 }
                 $('#chat-messages').html(html);
@@ -177,6 +154,37 @@
         });
     }
 
+    function getMessageHtml(msg) {
+        let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
+        let timeLabel = msg.message_time ? msg.message_time.substring(0, 16) : '';
+        let ticks = '';
+        if (msg.direction === 'out') {
+            ticks = msg.is_read 
+                ? ' <i class="fa fa-check-double text-success ms-1 tick-icon"></i>' 
+                : ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
+        }
+        
+        // Refined Delete Button: 3 Vertical Dots, Bold, White, Larger
+        let deleteBtn = '';
+        if (msg.direction === 'out') {
+            deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 5px; right: 5px; opacity: 0; transition: all 0.2s ease;">
+                            <button class="btn btn-link btn-sm text-white p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none; line-height: 1;">
+                                <i class="fas fa-ellipsis-v" style="font-size: 1.2rem; filter: drop-shadow(0px 0px 1px rgba(0,0,0,0.5));"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="font-size: 0.85rem; border-radius: 10px;">
+                                <li><a class="dropdown-item text-danger fw-bold py-2" href="javascript:void(0)" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Haye ye Delete Everyone' : 'Delete for Everyone'}</a></li>
+                                <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> ${baseUrl.includes('telegroupbot') ? 'Sirf Mere Liye' : 'Delete for Me'}</a></li>
+                            </ul>
+                         </div>`;
+        }
+
+        return `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%; min-width: 90px; padding-top: 10px !important;">
+                    ${deleteBtn}
+                    <div style="white-space: pre-wrap; padding-right: 18px; margin-top: 2px;">${msg.message}</div>
+                    <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem; margin-top: 3px;">${timeLabel}${ticks}</div>
+                 </div>`;
+    }
+
     $('#reply-form').on('submit', function(e) {
         e.preventDefault();
         let message = $('#message-input').val().trim();
@@ -203,27 +211,8 @@
                 $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
 
                 if(res.success && res.message_obj) {
-                    let msg = res.message_obj;
-                    let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
-                    let ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
-                    
-                    let deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 2px; right: 2px; opacity: 0;">
-                                            <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-chevron-down" style="font-size: 0.6rem;"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
-                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> Delete for Everyone</a></li>
-                                                <li><a class="dropdown-item" href="#" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> Delete for Me</a></li>
-                                            </ul>
-                                         </div>`;
-
-                    let html = `<div class="p-2 mb-2 rounded shadow-sm align-self-end bg-primary text-white msg-item position-relative" data-id="${msg.id}" style="max-width: 70%;">
-                                    ${deleteBtn}
-                                    <div style="white-space: pre-wrap; padding-right: 15px;">${msg.message}</div>
-                                    <div class="text-end small text-white-50" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
-                                </div>`;
                     $('#chat-messages .text-muted').remove();
-                    $('#chat-messages').append(html);
+                    $('#chat-messages').append(getMessageHtml(res.message_obj));
                     scrollToBottom();
                 } else if(!res.success) {
                     alert(res.error || "Failed to send message");
@@ -239,13 +228,6 @@
     });
 
     $(document).ready(function() {
-        // Hover effect for delete button
-        $(document).on('mouseenter', '.msg-item', function() {
-            $(this).find('.msg-options').css('opacity', '1');
-        }).on('mouseleave', '.msg-item', function() {
-            $(this).find('.msg-options').css('opacity', '0');
-        });
-
         // Auto-load first contact
         let $first = $('.contact-item').first();
         if ($first.length) { $first.trigger('click'); }
@@ -276,34 +258,8 @@
 
                         // 1. If this is the active chat, append message
                         if (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString() || activeContact == msg.contact_identifier)) {
-                            let align = msg.direction === 'out' ? 'align-self-end bg-primary text-white' : 'align-self-start bg-white';
-                            let timeLabel = msg.message_time ? msg.message_time.substring(11, 16) : '';
-                            let ticks = '';
-                            if (msg.direction === 'out') {
-                                ticks = ' <i class="fa fa-check text-white-50 ms-1 tick-icon"></i>';
-                            }
-
-                            let deleteBtn = '';
-                            if (msg.direction === 'out') {
-                                deleteBtn = `<div class="dropdown msg-options" style="position: absolute; top: 2px; right: 2px; opacity: 0;">
-                                                <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="fas fa-chevron-down" style="font-size: 0.6rem;"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
-                                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteMsg(${msg.id}, 'everyone')"><i class="fas fa-trash-alt me-2"></i> Delete for Everyone</a></li>
-                                                    <li><a class="dropdown-item" href="#" onclick="deleteMsg(${msg.id}, 'me')"><i class="fas fa-eraser me-2"></i> Delete for Me</a></li>
-                                                </ul>
-                                            </div>`;
-                            }
-
-                            let html = `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%;">
-                                            ${deleteBtn}
-                                            <div style="white-space: pre-wrap; padding-right: 15px;">${msg.message}</div>
-                                            <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem;">${timeLabel}${ticks}</div>
-                                        </div>`;
-                            
                             $('#chat-messages .text-center, #chat-messages .text-muted').remove();
-                            $('#chat-messages').append(html);
+                            $('#chat-messages').append(getMessageHtml(msg));
                             scrollToBottom();
                         }
 
@@ -361,7 +317,8 @@
     });
 </script>
 <style>
-    .msg-item:hover .msg-options { opacity: 1 !important; }
+    .msg-item:hover .msg-options { opacity: 1 !important; visibility: visible !important; }
+    .msg-options button:hover { background: rgba(255,255,255,0.2); border-radius: 50%; }
     .msg-options button:focus { box-shadow: none; }
 </style>
 @endpush
