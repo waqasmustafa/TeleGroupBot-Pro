@@ -109,7 +109,7 @@
         $('#chat-messages').html('<div class="text-center my-auto"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><br>Loading messages...</div>');
 
         // Mark as Read
-        $.post("{{route('inbox.read')}}", {
+        $.post("{{route('mtproto.inbox.read')}}", {
             _token: "{{csrf_token()}}",
             identifier: identifier,
             account_id: activeAccount
