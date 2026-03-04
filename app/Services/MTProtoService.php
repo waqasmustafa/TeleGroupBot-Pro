@@ -199,6 +199,16 @@ class MTProtoService implements MTProtoServiceInterface
                 '_' => 'inputMediaUploadedPhoto',
                 'file' => $filePath
             ];
+        } elseif ($mediaType === 'video') {
+            // Send video as a document with video attribute
+            $media = [
+                '_' => 'inputMediaUploadedDocument',
+                'file' => $filePath,
+                'attributes' => [
+                    ['_' => 'documentAttributeVideo', 'duration' => 0, 'w' => 0, 'h' => 0],
+                    ['_' => 'documentAttributeFilename', 'file_name' => basename($filePath)]
+                ]
+            ];
         }
 
         return $this->MadelineProto->messages->sendMedia([

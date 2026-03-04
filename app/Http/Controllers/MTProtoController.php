@@ -496,6 +496,8 @@ public function campaignsIndex()
 
     public function sendMedia(Request $request)
     {
+        set_time_limit(300); // 5 minutes
+        ini_set('memory_limit', '512M');
         $request->validate([
             'identifier' => 'required',
             'account_id' => 'required',
@@ -517,7 +519,9 @@ public function campaignsIndex()
         $mtproto->setSessionFile($account->session_path);
 
         try {
+            \Log::info("Attempting to send media", ['type' => $request->media_type, 'path' => $filePath->getPathname()]);
             $response = $mtproto->sendMedia($request->identifier, $filePath->getPathname(), '', $request->media_type);
+            \Log::info("Media sent response", ['response' => $response]);
             
             // Extract Telegram Message ID robustly
             $telegram_id = null;
