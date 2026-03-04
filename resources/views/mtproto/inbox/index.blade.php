@@ -51,19 +51,19 @@
                     <form id="reply-form" class="d-none" enctype="multipart/form-data">
                         <input type="hidden" id="active-account-id" value="">
                         <input type="file" id="media-input" class="d-none" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip">
-                        <div class="input-group">
+                        <div class="input-group align-items-center">
                             <div class="dropdown">
-                                <button class="btn btn-outline-secondary dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn btn-outline-secondary dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 5px 0 0 5px; height: 38px;">
                                     <i class="fas fa-paperclip"></i>
                                 </button>
                                 <ul class="dropdown-menu shadow">
-                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerMedia('photo')"><i class="fas fa-image me-2 text-primary"></i> ${baseUrl.includes('telegroupbot') ? 'Tasveer bheinjein' : 'Send Photo'}</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerMedia('video')"><i class="fas fa-video me-2 text-danger"></i> ${baseUrl.includes('telegroupbot') ? 'Video bheinjein' : 'Send Video'}</a></li>
-                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerMedia('document')"><i class="fas fa-file-alt me-2 text-info"></i> ${baseUrl.includes('telegroupbot') ? 'File bheinjein' : 'Send Document'}</a></li>
+                                    <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="triggerMedia('photo')"><i class="fas fa-image me-2 text-primary"></i> Send Photo</a></li>
+                                    <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="triggerMedia('video')"><i class="fas fa-video me-2 text-danger"></i> Send Video</a></li>
+                                    <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="triggerMedia('document')"><i class="fas fa-file-alt me-2 text-info"></i> Send Document</a></li>
                                 </ul>
                             </div>
-                            <input type="text" id="message-input" class="form-control" placeholder="{{__('Type your reply...')}}">
-                            <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i></button>
+                            <input type="text" id="message-input" class="form-control" placeholder="{{__('Type your reply...')}}" style="height: 38px;">
+                            <button class="btn btn-primary" type="submit" style="height: 38px;"><i class="fas fa-paper-plane"></i></button>
                         </div>
                     </form>
                 </div>
@@ -152,7 +152,7 @@
     }
 
     function deleteMsg(id, type) {
-        let confirmText = type === 'everyone' ? "Kya aap waqai AIK SATH sab ke liye delete karna chahte hain?" : "Sirf aap ke pas se delete ho ga, samne wale ke pas rahe ga. Continue?";
+        let confirmText = type === 'everyone' ? "Are you sure you want to delete this message for everyone?" : "Delete for me only? This will still be visible to the recipient.";
         if(!confirm(confirmText)) return;
 
         $.ajax({

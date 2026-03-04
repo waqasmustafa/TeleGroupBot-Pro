@@ -519,6 +519,19 @@ public function campaignsIndex()
         try {
             $response = $mtproto->sendMedia($request->identifier, $filePath->getPathname(), '', $request->media_type);
             
+            // Extract Telegram Message ID robustly
+            $telegram_id = null;
+            if (isset($response['id'])) {
+                $telegram_id = $response['id'];
+            } elseif (isset($response['updates'])) {
+                foreach ($response['updates'] as $update) {
+                    if (isset($update['message']['id'])) {
+                        $telegram_id = $update['message']['id'];
+                        break;
+                    }
+                }
+            }
+
             // Log to database
             $msg = \App\Models\MtprotoMessage::create([
                 'user_id' => $account->user_id,
@@ -528,7 +541,7 @@ public function campaignsIndex()
                 'message' => '[' . ucfirst($request->media_type) . ' Sent]',
                 'message_time' => now(),
                 'status' => '1',
-                'telegram_message_id' => $response['id'] ?? null
+                'telegram_message_id' => $telegram_id
             ]);
 
             // Clean up temp file
