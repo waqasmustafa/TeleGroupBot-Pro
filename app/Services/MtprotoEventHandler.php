@@ -84,6 +84,40 @@ class MtprotoEventHandler extends EventHandler
             $messageText = $message['message'] ?? '';
             $messageTime = date('Y-m-d H:i:s', $message['date'] ?? time());
 
+            $mediaPath = null;
+            $mediaType = null;
+
+            // HANDLE INCOMING MEDIA
+            if (isset($message['media']) && $message['media']['_'] !== 'messageMediaEmpty') {
+                try {
+                    $dir = storage_path('app/public/inbox_media');
+                    if (!file_exists($dir)) {
+                        @mkdir($dir, 0777, true);
+                    }
+
+                    Log::info("Downloading media for Account " . self::$account_id, ['media' => $message['media']['_']]);
+                    
+                    // downloadToDirectory is the v8 way to download media in EventHandler
+                    $outputFile = $this->downloadToDirectory($message, $dir);
+                    
+                    if ($outputFile) {
+                        $mediaPath = $outputFile;
+                        $mediaType = 'document'; // Default
+
+                        if (isset($message['media']['photo'])) $mediaType = 'photo';
+                        elseif (isset($message['media']['video'])) $mediaType = 'video';
+                        
+                        Log::info("Media downloaded successfully", ['path' => $mediaPath, 'type' => $mediaType]);
+                        
+                        if (empty($messageText)) {
+                            $messageText = '[' . ucfirst($mediaType) . ' Received]';
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Media download failed: " . $e->getMessage());
+                }
+            }
+
             // Avoid duplicates
             $exists = MtprotoMessage::where('account_id', self::$account_id)
                 ->where('contact_identifier', $identifier)
@@ -98,6 +132,8 @@ class MtprotoEventHandler extends EventHandler
                     'contact_identifier' => $identifier,
                     'direction'          => 'in',
                     'message'            => $messageText,
+                    'media_path'         => $mediaPath,
+                    'media_type'         => $mediaType,
                     'message_time'       => $messageTime,
                     'status'             => 'success',
                 ]);

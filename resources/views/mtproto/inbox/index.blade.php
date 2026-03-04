@@ -201,9 +201,46 @@
         }
 
         let messageContent = msg.message;
-        if (msg.message === '[Photo Sent]') messageContent = '<i class="fas fa-image me-1"></i> ' + msg.message;
-        if (msg.message === '[Video Sent]') messageContent = '<i class="fas fa-video me-1"></i> ' + msg.message;
-        if (msg.message === '[Document Sent]') messageContent = '<i class="fas fa-file-alt me-1"></i> ' + msg.message;
+        if (msg.media_path) {
+            let fileUrl = baseUrl + '/storage/' + msg.media_path.split('public/')[1];
+            if (msg.media_type === 'photo') {
+                messageContent = `<div class="mb-2"><img src="${fileUrl}" class="img-fluid rounded border shadow-sm media-preview" style="max-height: 250px; cursor: pointer;" onclick="window.open('${fileUrl}')"></div>`;
+                if (msg.message && !msg.message.includes('[Photo Received]') && !msg.message.includes('[Photo Sent]')) {
+                    messageContent += `<div>${msg.message}</div>`;
+                }
+            } else if (msg.media_type === 'video') {
+                messageContent = `<div class="mb-2">
+                                    <div class="d-flex align-items-center p-2 bg-dark rounded text-white" style="cursor: pointer;" onclick="window.open('${fileUrl}')">
+                                        <i class="fas fa-play-circle fa-2x me-2 text-primary"></i>
+                                        <div>
+                                            <div class="small fw-bold">Video File</div>
+                                            <div class="text-white-50" style="font-size: 0.6rem;">Click to view/download</div>
+                                        </div>
+                                    </div>
+                                  </div>`;
+                if (msg.message && !msg.message.includes('[Video Received]') && !msg.message.includes('[Video Sent]')) {
+                    messageContent += `<div>${msg.message}</div>`;
+                }
+            } else {
+                messageContent = `<div class="mb-2">
+                                    <a href="${fileUrl}" target="_blank" class="text-decoration-none d-flex align-items-center p-2 bg-light rounded border text-dark">
+                                        <i class="fas fa-file-alt fa-2x me-2 text-secondary"></i>
+                                        <div style="overflow: hidden;">
+                                            <div class="small fw-bold text-truncate">${msg.media_path.split(/[\\/]/).pop()}</div>
+                                            <div class="text-muted" style="font-size: 0.6rem;">Download File</div>
+                                        </div>
+                                    </a>
+                                  </div>`;
+                if (msg.message && !msg.message.includes('[Document Received]') && !msg.message.includes('[Document Sent]')) {
+                    messageContent += `<div>${msg.message}</div>`;
+                }
+            }
+        } else {
+            // Legacy/Text fallback
+            if (msg.message === '[Photo Sent]') messageContent = '<i class="fas fa-image me-1"></i> ' + msg.message;
+            if (msg.message === '[Video Sent]') messageContent = '<i class="fas fa-video me-1"></i> ' + msg.message;
+            if (msg.message === '[Document Sent]') messageContent = '<i class="fas fa-file-alt me-1"></i> ' + msg.message;
+        }
 
         return `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%; min-width: 90px; padding-top: 10px !important;">
                     ${deleteBtn}
