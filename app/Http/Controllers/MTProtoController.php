@@ -545,7 +545,9 @@ public function campaignsIndex()
             ]);
 
             // Clean up temp file
-            // @unlink($filePath->getPathname());
+            if (file_exists($filePath->getPathname())) {
+                @unlink($filePath->getPathname());
+            }
 
             return response()->json(['success' => true, 'message_obj' => $msg]);
         } catch (\Exception $e) {
