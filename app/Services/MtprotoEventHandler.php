@@ -97,8 +97,8 @@ class MtprotoEventHandler extends EventHandler
 
                     Log::info("Downloading media for Account " . self::$account_id, ['media' => $message['media']['_']]);
                     
-                    // downloadToDirectory is the v8 way to download media in EventHandler
-                    $outputFile = $this->downloadToDirectory($message, $dir);
+                    // downloadToDir is the correct method in MadelineProto v8 CLI/IPC
+                    $outputFile = $this->downloadToDir($message, $dir);
                     
                     if ($outputFile) {
                         $mediaPath = $outputFile;
@@ -108,13 +108,17 @@ class MtprotoEventHandler extends EventHandler
                         elseif (isset($message['media']['video'])) $mediaType = 'video';
                         
                         Log::info("Media downloaded successfully", ['path' => $mediaPath, 'type' => $mediaType]);
-                        
-                        if (empty($messageText)) {
-                            $messageText = '[' . ucfirst($mediaType) . ' Received]';
-                        }
                     }
                 } catch (\Throwable $e) {
                     Log::error("Media download failed: " . $e->getMessage());
+                }
+            }
+
+            if (empty($messageText)) {
+                if ($mediaType) {
+                    $messageText = '[' . ucfirst($mediaType) . ' Received]';
+                } else {
+                    $messageText = '[Non-text message]';
                 }
             }
 
