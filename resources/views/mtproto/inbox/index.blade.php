@@ -25,11 +25,18 @@
                 <div class="card-header py-2"><h4>{{__('Chats')}}</h4></div>
                 <div class="list-group list-group-flush" id="conversation-list">
                     @foreach($conversations as $chat)
-                        <a href="#" class="list-group-item list-group-item-action contact-item" data-id="{{$chat->contact_identifier}}" data-account-id="{{$chat->account_id}}">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                <h6 class="mb-1">{{$chat->contact_identifier}}</h6>
-                                <span class="badge bg-success rounded-pill unread-badge {{ $chat->unread_count > 0 ? '' : 'd-none' }}" style="font-size: 0.7rem;">{{$chat->unread_count}}</span>
-                                <small class="text-muted">{{$chat->last_msg}}</small>
+                        <a href="#" class="list-group-item list-group-item-action contact-item p-3" data-id="{{$chat->contact_identifier}}" data-account-id="{{$chat->account_id}}">
+                            <div class="d-flex w-100 justify-content-between align-items-center position-relative">
+                                <div>
+                                    <h6 class="mb-1">{{$chat->contact_identifier}}</h6>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">{{$chat->last_msg}}</small>
+                                </div>
+                                <div class="text-end d-flex align-items-center">
+                                    <span class="badge bg-success rounded-pill unread-badge me-2 {{ $chat->unread_count > 0 ? '' : 'd-none' }}" style="font-size: 0.7rem;">{{$chat->unread_count}}</span>
+                                    <button class="btn btn-sm btn-outline-danger delete-chat-btn border-0 py-0 px-1" title="Delete Conversation" onclick="deleteConversation(event, '{{$chat->contact_identifier}}', {{$chat->account_id}})">
+                                        <i class="fas fa-trash-alt" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </div>
                             </div>
                         </a>
                     @endforeach
@@ -460,5 +467,10 @@
     .msg-options button:focus { box-shadow: none; }
     .no-caret::after { display: none !important; }
     .attachment-preview { max-width: 200px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; }
+    
+    /* Delete Chat Button */
+    .delete-chat-btn { opacity: 0; transition: opacity 0.2s; }
+    .contact-item:hover .delete-chat-btn { opacity: 1; }
+    .contact-item.active .delete-chat-btn { opacity: 1; color: #dc3545; }
 </style>
 @endpush

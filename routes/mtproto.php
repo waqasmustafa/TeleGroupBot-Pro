@@ -35,5 +35,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('mtproto/inbox/send', [MTProtoController::class, 'sendReply'])->name('mtproto.inbox.send');
     Route::post('mtproto/inbox/send-media', [MTProtoController::class, 'sendMedia'])->name('mtproto.inbox.send_media');
     Route::post('mtproto/inbox/delete', [MTProtoController::class, 'deleteMessage'])->name('mtproto.inbox.delete');
+    Route::post('mtproto/inbox/delete-conversation', [MTProtoController::class, 'deleteConversation'])->name('mtproto.inbox.delete_conversation');
     Route::post('mtproto/inbox/read', [MTProtoController::class, 'markAsRead'])->name('mtproto.inbox.read');
 });

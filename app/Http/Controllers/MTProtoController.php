@@ -473,6 +473,31 @@ public function campaignsIndex()
         return response()->json(['success' => true]);
     }
 
+    public function deleteConversation(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required',
+            'account_id' => 'required'
+        ]);
+
+        $messages = \App\Models\MtprotoMessage::where('account_id', $request->account_id)
+            ->where('contact_identifier', $request->identifier)
+            ->get();
+
+        foreach ($messages as $msg) {
+            // Delete local media if exists
+            if ($msg->media_path) {
+                $fullPath = storage_path('app/public/' . $msg->media_path);
+                if (file_exists($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+            $msg->delete();
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     public function markAsRead(Request $request)
     {
         $request->validate([
