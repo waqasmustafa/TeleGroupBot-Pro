@@ -296,7 +296,9 @@
             },
             error: function(xhr) {
                 $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
-                alert(xhr.responseJSON ? xhr.responseJSON.error : "Upload failed.");
+                let err = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : "Upload failed (Status: " + xhr.status + ")";
+                alert(err);
+                console.error("Upload error details:", xhr);
             }
         });
     });

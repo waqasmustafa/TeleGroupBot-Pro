@@ -496,6 +496,7 @@ public function campaignsIndex()
 
     public function sendMedia(Request $request)
     {
+        \Log::info("sendMedia request received", $request->all());
         set_time_limit(300); // 5 minutes
         ini_set('memory_limit', '512M');
         $request->validate([
