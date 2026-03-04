@@ -101,16 +101,18 @@ class MtprotoEventHandler extends EventHandler
                     $outputFile = $this->downloadToDir($message, $dir);
                     
                     if ($outputFile && file_exists($outputFile)) {
-                        @chmod($outputFile, 0644); // CRITICAL: Ensure web server can read it
+                        @chmod($outputFile, 0644); // Ensure web server can read it
                         
+                        Log::info("Media downloaded successfully", ['path' => $outputFile]);
+
                         // Store relative path for easier web access
                         $mediaPath = 'inbox_media/' . basename($outputFile);
                         $mediaType = 'document'; // Default
 
                         if (isset($message['media']['photo'])) $mediaType = 'photo';
                         elseif (isset($message['media']['video'])) $mediaType = 'video';
-                        
-                        Log::info("Media downloaded successfully", ['path' => $mediaPath, 'type' => $mediaType]);
+                    } else {
+                        Log::error("Media download returned invalid path or file doesn't exist", ['path' => $outputFile]);
                     }
                 } catch (\Throwable $e) {
                     Log::error("Media download failed: " . $e->getMessage());
