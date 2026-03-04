@@ -48,9 +48,20 @@
                     <!-- Messages will appear here -->
                 </div>
                 <div class="card-footer">
-                    <form id="reply-form" class="d-none">
+                    <form id="reply-form" class="d-none" enctype="multipart/form-data">
                         <input type="hidden" id="active-account-id" value="">
+                        <input type="file" id="media-input" class="d-none" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip">
                         <div class="input-group">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <ul class="dropdown-menu shadow">
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerMedia('photo')"><i class="fas fa-image me-2 text-primary"></i> ${baseUrl.includes('telegroupbot') ? 'Tasveer bheinjein' : 'Send Photo'}</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerMedia('video')"><i class="fas fa-video me-2 text-danger"></i> ${baseUrl.includes('telegroupbot') ? 'Video bheinjein' : 'Send Video'}</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerMedia('document')"><i class="fas fa-file-alt me-2 text-info"></i> ${baseUrl.includes('telegroupbot') ? 'File bheinjein' : 'Send Document'}</a></li>
+                                </ul>
+                            </div>
                             <input type="text" id="message-input" class="form-control" placeholder="{{__('Type your reply...')}}">
                             <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i></button>
                         </div>
@@ -189,9 +200,14 @@
                          </div>`;
         }
 
+        let messageContent = msg.message;
+        if (msg.message === '[Photo Sent]') messageContent = '<i class="fas fa-image me-1"></i> ' + msg.message;
+        if (msg.message === '[Video Sent]') messageContent = '<i class="fas fa-video me-1"></i> ' + msg.message;
+        if (msg.message === '[Document Sent]') messageContent = '<i class="fas fa-file-alt me-1"></i> ' + msg.message;
+
         return `<div class="p-2 mb-2 rounded shadow-sm ${align} msg-item position-relative" data-id="${msg.id}" style="max-width: 70%; min-width: 90px; padding-top: 10px !important;">
                     ${deleteBtn}
-                    <div style="white-space: pre-wrap; padding-right: 18px; margin-top: 2px;">${msg.message}</div>
+                    <div style="white-space: pre-wrap; padding-right: 18px; margin-top: 2px;">${messageContent}</div>
                     <div class="text-end small ${msg.direction === 'out' ? 'text-white-50' : 'text-muted'}" style="font-size:0.7rem; margin-top: 3px;">${timeLabel}${ticks}</div>
                  </div>`;
     }
@@ -234,6 +250,53 @@
                 alert(errorMsg);
                 $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
                 $input.prop('disabled', false);
+            }
+        });
+    });
+
+    let currentMediaType = 'document';
+    function triggerMedia(type) {
+        currentMediaType = type;
+        let accept = "*/*";
+        if(type === 'photo') accept = "image/*";
+        if(type === 'video') accept = "video/*";
+        $('#media-input').attr('accept', accept).click();
+    }
+
+    $('#media-input').on('change', function() {
+        let file = this.files[0];
+        if(!file || !activeContact) return;
+
+        let formData = new FormData();
+        formData.append('_token', "{{csrf_token()}}");
+        formData.append('identifier', activeContact);
+        formData.append('account_id', activeAccount);
+        formData.append('media', file);
+        formData.append('media_type', currentMediaType);
+
+        let $btn = $('#reply-form button[type="submit"]');
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: "{{route('mtproto.inbox.send_media')}}",
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
+                $('#media-input').val('');
+                if(res.success && res.message_obj) {
+                    $('#chat-messages .text-muted').remove();
+                    $('#chat-messages').append(getMessageHtml(res.message_obj));
+                    scrollToBottom();
+                } else {
+                    alert(res.error || "Failed to send media");
+                }
+            },
+            error: function(xhr) {
+                $btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
+                alert(xhr.responseJSON ? xhr.responseJSON.error : "Upload failed.");
             }
         });
     });
@@ -343,5 +406,7 @@
     .msg-item:hover .msg-options { opacity: 1 !important; visibility: visible !important; }
     .msg-options button:hover { background: rgba(255,255,255,0.2); border-radius: 50%; }
     .msg-options button:focus { box-shadow: none; }
+    .no-caret::after { display: none !important; }
+    .attachment-preview { max-width: 200px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; }
 </style>
 @endpush

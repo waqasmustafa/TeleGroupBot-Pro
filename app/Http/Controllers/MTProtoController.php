@@ -493,4 +493,50 @@ public function campaignsIndex()
 
         return response()->json(['success' => true]);
     }
+
+    public function sendMedia(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required',
+            'account_id' => 'required',
+            'media' => 'required|file|max:20480', // 20MB limit
+            'media_type' => 'required|in:photo,video,document'
+        ]);
+
+        $account = \App\Models\MtprotoAccount::findOrFail($request->account_id);
+        if (!$this->is_admin && $account->user_id !== $this->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $file = $request->file('media');
+        $fileName = time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->move(storage_path('app/public/temp_media'), $fileName);
+
+        $mtproto = app(\App\Services\MTProtoServiceInterface::class);
+        $mtproto->setAccount($account);
+        $mtproto->setSessionFile($account->session_path);
+
+        try {
+            $response = $mtproto->sendMedia($request->identifier, $filePath->getPathname(), '', $request->media_type);
+            
+            // Log to database
+            $msg = \App\Models\MtprotoMessage::create([
+                'user_id' => $account->user_id,
+                'account_id' => $account->id,
+                'contact_identifier' => $request->identifier,
+                'direction' => 'out',
+                'message' => '[' . ucfirst($request->media_type) . ' Sent]',
+                'message_time' => now(),
+                'status' => '1',
+                'telegram_message_id' => $response['id'] ?? null
+            ]);
+
+            // Clean up temp file
+            // @unlink($filePath->getPathname());
+
+            return response()->json(['success' => true, 'message_obj' => $msg]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

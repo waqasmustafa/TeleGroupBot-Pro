@@ -184,6 +184,30 @@ class MTProtoService implements MTProtoServiceInterface
         ]);
     }
 
+    public function sendMedia($toId, $filePath, $message = '', $mediaType = 'document')
+    {
+        $this->includeMadeline();
+
+        $media = [
+            '_' => 'inputMediaUploadedDocument',
+            'file' => $filePath,
+            'attributes' => [['_' => 'documentAttributeFilename', 'file_name' => basename($filePath)]]
+        ];
+
+        if ($mediaType === 'photo') {
+            $media = [
+                '_' => 'inputMediaUploadedPhoto',
+                'file' => $filePath
+            ];
+        }
+
+        return $this->MadelineProto->messages->sendMedia([
+            'peer' => $toId,
+            'media' => $media,
+            'message' => $message,
+        ]);
+    }
+
     public function getMessages($limit = 20)
     {
         $this->includeMadeline();
