@@ -207,7 +207,14 @@
                 ? msg.media_path.split('public/')[1] 
                 : msg.media_path;
             
-            let fileUrl = baseUrl + '/storage/' + relativePath;
+            // Refined URL generation: avoid double /storage or missing /public
+            let cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+            let fileUrl = cleanBase + '/storage/' + relativePath;
+            
+            // Force fix if the user's URL still includes /public/ but the link is at /storage/
+            if (fileUrl.includes('/public/storage/')) {
+                fileUrl = fileUrl.replace('/public/storage/', '/storage/');
+            }
             
             if (msg.media_type === 'photo') {
                 messageContent = `<div class="mb-2"><img src="${fileUrl}" class="img-fluid rounded border shadow-sm media-preview" style="max-height: 250px; cursor: pointer;" onclick="window.open('${fileUrl}')"></div>`;
