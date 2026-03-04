@@ -311,6 +311,40 @@
         });
     });
 
+    function deleteConversation(event, identifier, accountId) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        if (confirm("Are you sure you want to delete this conversation? This will delete all messages and media for this contact from your database.")) {
+            $.post("{{route('mtproto.inbox.delete_conversation')}}", {
+                _token: "{{csrf_token()}}",
+                identifier: identifier,
+                account_id: accountId
+            }, function(response) {
+                if (response.success) {
+                    $(`.contact-item[data-id="${identifier}"][data-account-id="${accountId}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                    
+                    if (activeContact == identifier && activeAccount == accountId) {
+                        $('#chat-messages').html('<div class="text-center my-auto text-muted">Conversation deleted.</div>');
+                        $('#chat-title').text('Select a chat');
+                        $('#active-account-badge').addClass('d-none');
+                        $('#reply-form').addClass('d-none');
+                        activeContact = null;
+                        activeAccount = null;
+                    }
+                } else {
+                    alert(response.error || "Failed to delete conversation");
+                }
+            }).fail(function() {
+                alert("Server error while deleting conversation");
+            });
+        }
+    }
+
     let currentMediaType = 'document';
     function triggerMedia(type) {
         currentMediaType = type;
@@ -410,14 +444,18 @@
 
                             $('#conversation-list').prepend($contactRow);
                         } else {
-                            let unreadClass = (activeContact && activeAccount == accountId && (activeContact.toString() == identifier.toString())) ? 'd-none' : '';
-                            let unreadVal = unreadClass === '' ? '1' : '0';
-
-                            let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item" data-id="${identifier}" data-account-id="${accountId}">
-                                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                                <h6 class="mb-1">${identifier}</h6>
-                                                <span class="badge bg-success rounded-pill unread-badge ${unreadClass}" style="font-size: 0.7rem;">${unreadVal}</span>
-                                                <small class="text-muted">${msg.message_time}</small>
+                            let newRow = `<a href="#" class="list-group-item list-group-item-action contact-item p-3" data-id="${identifier}" data-account-id="${accountId}">
+                                            <div class="d-flex w-100 justify-content-between align-items-center position-relative">
+                                                <div>
+                                                    <h6 class="mb-1">${identifier}</h6>
+                                                    <small class="text-muted d-block" style="font-size: 0.75rem;">${msg.message_time}</small>
+                                                </div>
+                                                <div class="text-end d-flex align-items-center">
+                                                    <span class="badge bg-success rounded-pill unread-badge me-2 ${unreadClass}" style="font-size: 0.7rem;">${unreadVal}</span>
+                                                    <button class="btn btn-sm btn-outline-danger delete-chat-btn border-0 py-0 px-1" title="Delete Conversation" onclick="deleteConversation(event, '${identifier}', ${accountId})">
+                                                        <i class="fas fa-trash-alt" style="font-size: 0.8rem;"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                           </a>`;
                             $('#conversation-list').prepend(newRow);
