@@ -202,7 +202,13 @@
 
         let messageContent = msg.message;
         if (msg.media_path) {
-            let fileUrl = baseUrl + '/storage/' + msg.media_path.split('public/')[1];
+            // Handle both absolute paths (legacy) and relative paths (new)
+            let relativePath = msg.media_path.includes('public/') 
+                ? msg.media_path.split('public/')[1] 
+                : msg.media_path;
+            
+            let fileUrl = baseUrl + '/storage/' + relativePath;
+            
             if (msg.media_type === 'photo') {
                 messageContent = `<div class="mb-2"><img src="${fileUrl}" class="img-fluid rounded border shadow-sm media-preview" style="max-height: 250px; cursor: pointer;" onclick="window.open('${fileUrl}')"></div>`;
                 if (msg.message && !msg.message.includes('[Photo Received]') && !msg.message.includes('[Photo Sent]')) {

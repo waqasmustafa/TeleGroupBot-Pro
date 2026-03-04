@@ -101,7 +101,8 @@ class MtprotoEventHandler extends EventHandler
                     $outputFile = $this->downloadToDir($message, $dir);
                     
                     if ($outputFile) {
-                        $mediaPath = $outputFile;
+                        // Store relative path for easier web access
+                        $mediaPath = 'inbox_media/' . basename($outputFile);
                         $mediaType = 'document'; // Default
 
                         if (isset($message['media']['photo'])) $mediaType = 'photo';
