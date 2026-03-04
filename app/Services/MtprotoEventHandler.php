@@ -100,7 +100,9 @@ class MtprotoEventHandler extends EventHandler
                     // downloadToDir is the correct method in MadelineProto v8 CLI/IPC
                     $outputFile = $this->downloadToDir($message, $dir);
                     
-                    if ($outputFile) {
+                    if ($outputFile && file_exists($outputFile)) {
+                        @chmod($outputFile, 0644); // CRITICAL: Ensure web server can read it
+                        
                         // Store relative path for easier web access
                         $mediaPath = 'inbox_media/' . basename($outputFile);
                         $mediaType = 'document'; // Default
