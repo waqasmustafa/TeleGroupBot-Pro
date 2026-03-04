@@ -510,52 +510,39 @@ public function campaignsIndex()
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        if (!file_exists(storage_path('app/public/temp_media'))) {
+            @mkdir(storage_path('app/public/temp_media'), 0777, true);
+        }
+
         $file = $request->file('media');
         $fileName = time() . '_' . $file->getClientOriginalName();
         $filePath = $file->move(storage_path('app/public/temp_media'), $fileName);
+        $fullPath = $filePath->getPathname();
 
-        $mtproto = app(\App\Services\MTProtoServiceInterface::class);
-        $mtproto->setAccount($account);
-        $mtproto->setSessionFile($account->session_path);
+        // Save message immediately to DB with 'pending' status
+        $msg = \App\Models\MtprotoMessage::create([
+            'user_id'            => $account->user_id,
+            'account_id'         => $account->id,
+            'contact_identifier' => $request->identifier,
+            'direction'          => 'out',
+            'message'            => '[' . ucfirst($request->media_type) . ' Sent]',
+            'media_path'         => $fullPath,
+            'media_type'         => $request->media_type,
+            'status'             => 'pending',
+            'message_time'       => now()
+        ]);
 
-        try {
-            \Log::info("Attempting to send media", ['type' => $request->media_type, 'path' => $filePath->getPathname()]);
-            $response = $mtproto->sendMedia($request->identifier, $filePath->getPathname(), '', $request->media_type);
-            \Log::info("Media sent response", ['response' => $response]);
-            
-            // Extract Telegram Message ID robustly
-            $telegram_id = null;
-            if (isset($response['id'])) {
-                $telegram_id = $response['id'];
-            } elseif (isset($response['updates'])) {
-                foreach ($response['updates'] as $update) {
-                    if (isset($update['message']['id'])) {
-                        $telegram_id = $update['message']['id'];
-                        break;
-                    }
-                }
-            }
+        // Dispatch to queue worker — avoids web server timeouts and MadelineProto IPC issues
+        \App\Jobs\SendInboxReplyJob::dispatch(
+            $account->id,
+            $account->user_id,
+            $request->identifier,
+            $msg->message,
+            $msg->id
+        );
 
-            // Log to database
-            $msg = \App\Models\MtprotoMessage::create([
-                'user_id' => $account->user_id,
-                'account_id' => $account->id,
-                'contact_identifier' => $request->identifier,
-                'direction' => 'out',
-                'message' => '[' . ucfirst($request->media_type) . ' Sent]',
-                'message_time' => now(),
-                'status' => '1',
-                'telegram_message_id' => $telegram_id
-            ]);
+        \Log::info("Inbox media queued", ['to' => $request->identifier, 'type' => $request->media_type, 'msg_id' => $msg->id]);
 
-            // Clean up temp file
-            if (file_exists($filePath->getPathname())) {
-                @unlink($filePath->getPathname());
-            }
-
-            return response()->json(['success' => true, 'message_obj' => $msg]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json(['success' => true, 'message_obj' => $msg]);
     }
 }

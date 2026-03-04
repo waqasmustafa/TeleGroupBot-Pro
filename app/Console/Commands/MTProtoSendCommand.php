@@ -32,13 +32,20 @@ class MTProtoSendCommand extends Command
             return 1;
         }
 
-        $this->info("Sending message to {$identifier} via account #{$accountId}...");
-
         try {
-            $result = $mtproto->setAccount($account)->sendMessage($identifier, $msgRecord->message);
+            if ($msgRecord->media_path && file_exists($msgRecord->media_path)) {
+                $this->info("Sending media ({$msgRecord->media_type}) to {$identifier}...");
+                $result = $mtproto->setAccount($account)->sendMedia(
+                    $identifier, 
+                    $msgRecord->media_path,
+                    '', 
+                    $msgRecord->media_type ?: 'document'
+                );
+            } else {
+                $this->info("Sending message to {$identifier} via account #{$accountId}...");
+                $result = $mtproto->setAccount($account)->sendMessage($identifier, $msgRecord->message);
+            }
             
-            // MadelineProto sendMessage returns an 'updates' object.
-            // We need to find the ID of the newly created message.
             $telegram_id = null;
             if (isset($result['id'])) {
                 $telegram_id = $result['id'];
@@ -59,6 +66,11 @@ class MTProtoSendCommand extends Command
                 'status' => 'success',
                 'telegram_message_id' => $telegram_id
             ]);
+
+            // Clean up temp media file if it exists
+            if ($msgRecord->media_path && file_exists($msgRecord->media_path)) {
+                @unlink($msgRecord->media_path);
+            }
 
             $this->info("Message sent successfully. Telegram ID: " . ($telegram_id ?? 'N/A'));
             Log::info("mtproto:send - Message #{$messageId} sent to {$identifier}, Telegram ID: {$telegram_id}");
