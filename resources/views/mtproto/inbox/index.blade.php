@@ -29,6 +29,9 @@
                             <div class="d-flex w-100 justify-content-between align-items-center position-relative">
                                 <div>
                                     <h6 class="mb-1">{{$chat->contact_identifier}}</h6>
+                                    @if($chat->contact_phone && $chat->contact_phone != $chat->contact_identifier)
+                                        <small class="text-primary d-block fw-bold" style="font-size: 0.7rem;">{{ $chat->contact_phone }}</small>
+                                    @endif
                                     <small class="text-muted d-block" style="font-size: 0.75rem;">{{$chat->last_msg}}</small>
                                 </div>
                                 <div class="text-end d-flex align-items-center">
@@ -139,8 +142,21 @@
         $.ajax({
             url: baseUrl + "/mtproto/inbox/messages/" + encodeURIComponent(identifier),
             method: 'GET',
-            success: function(messages) {
+            success: function(response) {
                 let html = '';
+                let messages = response.messages || [];
+                let contact = response.contact || null;
+
+                if (contact) {
+                    let title = contact.first_name ? contact.first_name : identifier;
+                    if (contact.phone && contact.phone !== identifier) {
+                        title += ' (' + contact.phone + ')';
+                    }
+                    $('#chat-title').text('Chat with ' + title);
+                } else {
+                    $('#chat-title').text('Chat with ' + identifier);
+                }
+
                 if(!messages || messages.length === 0) {
                     html = '<div class="text-center my-auto text-muted">No messages found.</div>';
                 } else {

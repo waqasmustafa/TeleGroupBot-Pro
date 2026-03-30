@@ -13,6 +13,7 @@ interface MTProtoServiceInterface
     public function deleteMessages(array $messageIds, $revoke = true);
     public function sendMedia($toId, $filePath, $message = '', $mediaType = 'document');
     public function getMessages($limit = 20);
+    public function resolvePhoneToInfo(string $phone): array;
     public function logout();
     public function stop();
     public function startListener($account);
