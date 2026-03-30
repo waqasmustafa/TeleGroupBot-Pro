@@ -187,20 +187,65 @@ class MTProtoController extends Home
             while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
                 if (empty(array_filter($row))) continue;
 
-                $username = isset($row[0]) ? trim($row[0]) : null;
-                $phone = isset($row[1]) ? trim($row[1]) : null;
-                $first_name = isset($row[2]) ? trim($row[2]) : null;
+                $username = null;
+                $phone = null;
+                $first_name = null;
 
-                // Safety: Convert scientific notation back to string if detected
-                if (stripos((string)$username, 'E+') !== false) $username = number_format((float)$username, 0, '', '');
-                if (stripos((string)$phone, 'E+') !== false) $phone = number_format((float)$phone, 0, '', '');
+                $count = count($row);
+
+                if ($count >= 3) {
+                    // Standard: Username, Phone, Name
+                    $username = trim($row[0]);
+                    $phone = trim($row[1]);
+                    $first_name = trim($row[2]);
+                } elseif ($count == 2) {
+                    // Smart detection for 2 columns
+                    $col0 = trim($row[0]);
+                    $col1 = trim($row[1]);
+
+                    if (is_numeric($col0) || (strpos($col0, '+') === 0 && is_numeric(substr($col0, 1)))) {
+                        // Col 0 is Phone, Col 1 is Name
+                        $phone = $col0;
+                        $first_name = $col1;
+                    } else {
+                        // Col 0 is Username, Col 1 is Name
+                        $username = $col0;
+                        $first_name = $col1;
+                    }
+                } elseif ($count == 1) {
+                    // Just one column? Assume it's username or phone
+                    $val = trim($row[0]);
+                    if (is_numeric($val) || (strpos($val, '+') === 0 && is_numeric(substr($val, 1)))) {
+                        $phone = $val;
+                    } else {
+                        $username = $val;
+                    }
+                }
+
+                // Cleanup Phone
+                if ($phone) {
+                    // Convert scientific notation if detected
+                    if (stripos((string)$phone, 'E+') !== false) $phone = number_format((float)$phone, 0, '', '');
+                    // Remove any non-numeric characters EXCEPT leading +
+                    $is_plus = (strpos((string)$phone, '+') === 0);
+                    $phone = preg_replace('/[^0-9]/', '', $phone);
+                    if ($is_plus) $phone = '+' . $phone;
+                }
+
+                // Cleanup Username
+                if ($username) {
+                    if (stripos((string)$username, 'E+') !== false) $username = number_format((float)$username, 0, '', '');
+                    // Optional: remove @ if client wants it clean, but Madeline handles both. 
+                    // Let's keep it as is but trim whitespace.
+                    $username = trim($username);
+                }
 
                 \App\Models\MtprotoContact::create([
                     'user_id' => $this->user_id,
                     'list_id' => $list->id,
-                    'username' => $username,
-                    'phone' => $phone,
-                    'first_name' => $first_name,
+                    'username' => $username ?: null,
+                    'phone' => $phone ?: null,
+                    'first_name' => $first_name ?: 'User',
                 ]);
             }
             fclose($handle);

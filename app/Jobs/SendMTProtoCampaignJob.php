@@ -116,7 +116,19 @@ class SendMTProtoCampaignJob implements ShouldQueue
             }
             $active_service = $service_instances[$account->id];
 
-            $identifier = $contact->username ?: $contact->phone;
+            // Smart identifier: prefer username, fallback to phone number
+            $identifier = null;
+            if (!empty($contact->username)) {
+                $identifier = $contact->username; // Madeline handles @user and user both
+            } elseif (!empty($contact->phone)) {
+                $phone = (string)$contact->phone;
+                // Ensure phone number has + prefix
+                if (strpos($phone, '+') !== 0) {
+                    $phone = '+' . $phone;
+                }
+                $identifier = $phone;
+            }
+
             if (!$identifier) {
                 $index++;
                 continue;
