@@ -148,17 +148,52 @@ class MTProtoService implements MTProtoServiceInterface
         return $this->MadelineProto->complete2faLogin($password);
     }
 
+    /**
+     * Resolve a phone number peer by importing it into Telegram contacts first.
+     * This is required because MadelineProto cannot send to a phone number
+     * that is not in its internal peer database.
+     */
+    private function resolvePhonePeer(string $phone): string
+    {
+        // Clean the phone: ensure it has +
+        if (strpos($phone, '+') !== 0) {
+            $phone = '+' . $phone;
+        }
+
+        try {
+            $result = $this->MadelineProto->contacts->importContacts([
+                'contacts' => [[
+                    '_'          => 'inputPhoneContact',
+                    'client_id'  => rand(100000, 999999),
+                    'phone'      => $phone,
+                    'first_name' => 'Contact',
+                    'last_name'  => '',
+                ]]
+            ]);
+
+            // If we got a valid user back, use their ID
+            if (!empty($result['users'][0]['id'])) {
+                return (string)$result['users'][0]['id'];
+            }
+        } catch (\Exception $e) {
+            \Log::warning("resolvePhonePeer failed for {$phone}: " . $e->getMessage());
+        }
+
+        // Fallback: return the phone number as-is
+        return $phone;
+    }
+
     public function sendMessage($toId, $message)
     {
         $this->includeMadeline();
-        
-        // Ensure phone numbers start with + for MadelineProto v8 support
-        if (is_numeric($toId) && strpos((string)$toId, '+') !== 0 && strlen((string)$toId) > 8) {
-            $toId = '+' . (string)$toId;
+
+        // If it looks like a phone number, resolve it via importContacts
+        if (is_numeric(ltrim((string)$toId, '+')) && strlen(ltrim((string)$toId, '+')) > 8) {
+            $toId = $this->resolvePhonePeer((string)$toId);
         }
 
         return $this->MadelineProto->messages->sendMessage([
-            'peer' => $toId,
+            'peer'    => $toId,
             'message' => $message,
         ]);
     }
@@ -176,11 +211,11 @@ class MTProtoService implements MTProtoServiceInterface
     {
         $this->includeMadeline();
 
-        // Ensure phone numbers start with +
-        if (is_numeric($toId) && strpos((string)$toId, '+') !== 0 && strlen((string)$toId) > 8) {
-            $toId = '+' . (string)$toId;
+        // If it looks like a phone number, resolve it via importContacts
+        if (is_numeric(ltrim((string)$toId, '+')) && strlen(ltrim((string)$toId, '+')) > 8) {
+            $toId = $this->resolvePhonePeer((string)$toId);
         }
-        
+
         $media = [
             '_' => 'inputMediaUploadedDocument',
             'file' => $filePath,
