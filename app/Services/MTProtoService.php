@@ -175,12 +175,15 @@ class MTProtoService implements MTProtoServiceInterface
             if (!empty($result['users'][0]['id'])) {
                 return (string)$result['users'][0]['id'];
             }
-        } catch (\Exception $e) {
-            \Log::warning("resolvePhonePeer failed for {$phone}: " . $e->getMessage());
-        }
 
-        // Fallback: return the phone number as-is
-        return $phone;
+            // No user found — this number is not on Telegram or has privacy settings
+            throw new \RuntimeException("Phone number {$phone} is not registered on Telegram or could not be resolved.");
+
+        } catch (\RuntimeException $e) {
+            throw $e; // Re-throw so campaign job can skip this contact
+        } catch (\Exception $e) {
+            throw new \RuntimeException("Phone number {$phone} could not be resolved: " . $e->getMessage());
+        }
     }
 
     public function sendMessage($toId, $message)
