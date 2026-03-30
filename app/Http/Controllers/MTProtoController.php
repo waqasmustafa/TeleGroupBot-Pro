@@ -413,7 +413,7 @@ public function campaignsIndex()
     public function inbox()
     {
         $query = \App\Models\MtprotoMessage::query();
-        if(!$this->is_admin) $query->where('user_id', $this->user_id);
+        if(!$this->is_admin) $query->where('mtproto_messages.user_id', $this->user_id);
 
         $conversations = $query->select(
                 'mtproto_messages.contact_identifier', 
