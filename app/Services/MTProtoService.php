@@ -150,9 +150,10 @@ class MTProtoService implements MTProtoServiceInterface
 
     /**
      * Resolve a phone number peer by importing it into Telegram contacts first.
-     * Returns ['peer' => 'numeric_id_or_phone', 'username' => 'username_if_found']
+     * This is required because MadelineProto cannot send to a phone number
+     * that is not in its internal peer database.
      */
-    private function resolvePhonePeer(string $phone): array
+    private function resolvePhonePeer(string $phone): string
     {
         // Clean the phone: ensure it has +
         if (strpos($phone, '+') !== 0) {
@@ -170,19 +171,16 @@ class MTProtoService implements MTProtoServiceInterface
                 ]]
             ]);
 
+            // If we got a valid user back, use their ID
             if (!empty($result['users'][0]['id'])) {
-                $user = $result['users'][0];
-                return [
-                    'peer'     => (string)$user['id'],
-                    'username' => $user['username'] ?? null,
-                ];
+                return (string)$result['users'][0]['id'];
             }
 
-            // No user found — this number is not on Telegram
+            // No user found — this number is not on Telegram or has privacy settings
             throw new \RuntimeException("Phone number {$phone} is not registered on Telegram or could not be resolved.");
 
         } catch (\RuntimeException $e) {
-            throw $e;
+            throw $e; // Re-throw so campaign job can skip this contact
         } catch (\Exception $e) {
             throw new \RuntimeException("Phone number {$phone} could not be resolved: " . $e->getMessage());
         }
@@ -194,24 +192,13 @@ class MTProtoService implements MTProtoServiceInterface
 
         // If it looks like a phone number, resolve it via importContacts
         if (is_numeric(ltrim((string)$toId, '+')) && strlen(ltrim((string)$toId, '+')) > 8) {
-            $resolved = $this->resolvePhonePeer((string)$toId);
-            $toId = $resolved['peer'];
+            $toId = $this->resolvePhonePeer((string)$toId);
         }
 
         return $this->MadelineProto->messages->sendMessage([
             'peer'    => $toId,
             'message' => $message,
         ]);
-    }
-
-    /**
-     * Resolve phone to peer and also return the username discovered.
-     * Used by campaign job to save username→phone mapping.
-     */
-    public function resolvePhoneToInfo(string $phone): array
-    {
-        $this->includeMadeline();
-        return $this->resolvePhonePeer($phone);
     }
 
     public function deleteMessages(array $messageIds, $revoke = true)
@@ -229,8 +216,7 @@ class MTProtoService implements MTProtoServiceInterface
 
         // If it looks like a phone number, resolve it via importContacts
         if (is_numeric(ltrim((string)$toId, '+')) && strlen(ltrim((string)$toId, '+')) > 8) {
-            $resolved = $this->resolvePhonePeer((string)$toId);
-            $toId = $resolved['peer'];
+            $toId = $this->resolvePhonePeer((string)$toId);
         }
 
         $media = [

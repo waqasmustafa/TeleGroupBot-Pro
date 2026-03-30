@@ -413,27 +413,19 @@ public function campaignsIndex()
     public function inbox()
     {
         $query = \App\Models\MtprotoMessage::query();
-        if(!$this->is_admin) $query->where('mtproto_messages.user_id', $this->user_id);
+        if(!$this->is_admin) $query->where('user_id', $this->user_id);
 
         $conversations = $query->select(
-                'mtproto_messages.contact_identifier', 
-                'mtproto_messages.account_id', 
-                DB::raw('MAX(mtproto_messages.message_time) as last_msg'),
+                'contact_identifier', 
+                'account_id', 
+                DB::raw('MAX(message_time) as last_msg'),
                 DB::raw("(SELECT COUNT(*) FROM mtproto_messages m2 
                           WHERE m2.contact_identifier = mtproto_messages.contact_identifier 
                           AND m2.account_id = mtproto_messages.account_id 
                           AND m2.direction = 'in' 
-                          AND m2.is_read = 0) as unread_count"),
-                'c.phone as contact_phone',
-                'c.first_name as contact_name'
+                          AND m2.is_read = 0) as unread_count")
             )
-            ->leftJoin('mtproto_contacts as c', function($join) {
-                $join->on(function($query) {
-                    $query->on('c.username', '=', 'mtproto_messages.contact_identifier')
-                          ->orOn('c.phone', '=', 'mtproto_messages.contact_identifier');
-                })->on('c.user_id', '=', 'mtproto_messages.user_id');
-            })
-            ->groupBy('mtproto_messages.contact_identifier', 'mtproto_messages.account_id', 'c.phone', 'c.first_name')
+            ->groupBy('contact_identifier', 'account_id')
             ->orderBy('last_msg', 'desc')
             ->get();
 
@@ -456,17 +448,7 @@ public function campaignsIndex()
         
         $messages = $query->orderBy('message_time', 'asc')->get();
 
-        // Also find associated contact info
-        $contact = \App\Models\MtprotoContact::where(function($q) use ($identifier) {
-            $q->where('username', $identifier)->orWhere('phone', $identifier);
-        })->when(!$this->is_admin, function($q) {
-            return $q->where('user_id', $this->user_id);
-        })->first();
-
-        return response()->json([
-            'messages' => $messages,
-            'contact' => $contact
-        ]);
+        return response()->json($messages);
     }
 
     public function sendReply(Request $request)

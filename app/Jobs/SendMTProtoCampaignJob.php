@@ -145,27 +145,6 @@ class SendMTProtoCampaignJob implements ShouldQueue
                 // Personalize message
                 $message = str_replace('{first_name}', $contact->first_name ?? 'there', $template->message);
 
-                // If identifier is phone, resolve it to get peer ID and potentially username
-                $resolved_info = null;
-                if (is_numeric(ltrim((string)$identifier, '+')) && strlen(ltrim((string)$identifier, '+')) > 8) {
-                    try {
-                        $resolved_info = $active_service->resolvePhoneToInfo($identifier);
-                        
-                        // Update contact with discovered username if we don't have one
-                        if ($resolved_info['username'] && empty($contact->username)) {
-                            \App\Models\MtprotoContact::where('id', $contact->id)->update([
-                                'username' => $resolved_info['username']
-                            ]);
-                        }
-                        
-                        // Use the numeric ID for subsequent calls to be faster
-                        $identifier = $resolved_info['peer'];
-                    } catch (\Exception $e) {
-                        // Let resolve errors be caught by the outer catch to skip contact
-                        throw $e;
-                    }
-                }
-
                 $active_service->sendMessage($identifier, $message);
 
                 // Log success
